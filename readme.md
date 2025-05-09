@@ -1,6 +1,47 @@
-# Boilerplate MVC em Node.js com PostgreSQL
+# Projeto Indivídual - RoomWise
 
-Este projeto é um boilerplate básico para uma aplicação Node.js seguindo o padrão MVC (Model-View-Controller), utilizando PostgreSQL como banco de dados.
+O RoomWise é uma plataforma digital criada para gerenciar de forma eficiente espaços compartilhados — como salas de reunião, auditórios e laboratórios — em ambientes corporativos, educacionais e institucionais. Seu objetivo é eliminar conflitos de agendamento e maximizar a utilização dos ambientes, oferecendo:
+
+* Cadastro de usuários com níveis de permissão diferenciados
+* Classificação de salas por tipo, capacidade, localização e recursos
+* Verificação automática de disponibilidade no momento da reserva
+* Painel centralizado com visão em tempo real das reservas
+
+Desenvolvido com foco na experiência do usuário e em boas práticas de web, o RoomWise garante segurança, desempenho e escalabilidade. Diferente de calendários genéricos, ele atende às particularidades de espaços físicos — capacidade, equipamentos e políticas de uso —, simplificando o processo de reserva e promovendo maior produtividade organizacional.
+
+
+
+## Estrutura de Pastas
+```
+Projeto_DB_M2/
+│
+├── config/                # Arquivos de configuração (ex: conexão com banco)
+│   └── database.js
+├── controllers/           # Lógica de controle das requisições
+│   └── HomeController.js
+├── documentos             # Documentação do projeto
+│   └── wad.md
+├── models/                # Definição de modelos de dados (estrutura do banco)
+│   └── User.js
+├── routes/                # Definição das rotas do sistema
+│   └── frontRoutes.js
+│   └── userRoutes.js
+├── services/              # Serviços auxiliares do sistema
+│   └── userService.js
+├── assets/                # Arquivos públicos como imagens e fontes
+├── scripts/               # Arquivos de JavaScript públicos
+├── styles/                # Arquivos CSS públicos
+├── tests/                 # Arquivos de testes unitários
+│   └── example.test.js
+├── .gitignore             # Arquivo para ignorar arquivos no Git
+├── .env.example           # Arquivo de exemplo para variáveis de ambiente
+├── jest.config.js         # Arquivo de configuração do Jest
+├── package-lock.json      # Gerenciador de dependências do Node.js
+├── package.json           # Gerenciador de dependências do Node.js
+├── readme.md              # Documentação do projeto (Markdown)
+├── server.js              # Arquivo principal que inicializa o servidor
+└── rest.http              # Teste de endpoints (opcional)
+```
 
 ## Requisitos
 
@@ -12,8 +53,8 @@ Este projeto é um boilerplate básico para uma aplicação Node.js seguindo o p
 1. **Clonar o repositório:**
 
 ```bash
-   git clone https://github.com/seu-usuario/seu-projeto.git
-   cd seu-projeto
+   git clone https://github.com/V0no/Projeto-DB-M2.git
+   cd Projeto-DB-M2
 ```
 
 2. **Instalar as dependências:**
