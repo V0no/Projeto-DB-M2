@@ -53,6 +53,90 @@ Em síntese, o Sistema de Reserva de Salas representa uma solução tecnológica
 #### **Diagrama Entidade-Relacionamento (ER)**
 O sistema de Reserva de Salas utiliza um modelo relacional composto por quatro entidades principais: Usuários, Tipos de Sala, Salas e Reservas. Abaixo está representado o diagrama ER que ilustra essas entidades e seus relacionamentos com suas respectivas cardinalidades:
 
+<img src="/assets/modelo-banco.png" width="100%">
+
+#### **Legenda de Cardinalidade:**
+* (1): Um lado da relação com exatamente uma entidade
+* (N): Lado da relação com muitas entidades (zero ou mais)
+
+#### **Descrição das Entidades**
+
+**→ Users (Usuários)**
+Armazena informações dos usuários que podem realizar reservas de salas.
+
+* **user_id**: Identificador único do usuário (chave primária)
+* **name**: Nome completo do usuário
+* **email**: Email do usuário (único)
+* **password**: Senha criptografada do usuário
+* **phone**: Número de telefone para contato
+* **role**: Papel do usuário no sistema (administrador ou usuário comum)
+* **created_at**: Data e hora de criação do registro
+* **updated_at**: Data e hora da última atualização do registro
+
+**→ Room_Types (Tipos de Sala)**
+Categoriza os diferentes tipos de salas disponíveis no sistema.
+
+* **room_type_id**: Identificador único do tipo de sala (chave primária)
+* **name**: Nome do tipo de sala (ex: Reunião, Conferência, Treinamento)
+* **description**: Descrição detalhada do tipo de sala
+* **created_at**: Data e hora de criação do registro
+* **updated_at**: Data e hora da última atualização do registro
+
+**→ Rooms (Salas)**
+Armazena informações sobre as salas disponíveis para reserva.
+
+* **room_id**: Identificador único da sala (chave primária)
+* **name**: Nome ou número da sala
+* **capacity**: Capacidade máxima de pessoas
+* **location**: Localização física da sala (prédio, andar, etc.)
+* **room_type_id**: Chave estrangeira referenciando o tipo da sala
+* **status**: Status atual da sala (disponível ou em manutenção)
+* **created_at**: Data e hora de criação do registro
+* **updated_at**: Data e hora da última atualização do registro
+
+**→ Bookings (Reservas)**
+Registra as reservas de salas realizadas pelos usuários.
+
+* **booking_id**: Identificador único da reserva (chave primária)
+* **room_id**: Chave estrangeira referenciando a sala reservada
+* **user_id**: Chave estrangeira referenciando o usuário que fez a reserva
+* **title**: Título ou propósito da reserva
+* **description**: Descrição detalhada do evento ou reunião
+* **start_time**: Data e hora de início da reserva
+* **end_time**: Data e hora de término da reserva
+* **status**: Status da reserva (confirmada, cancelada, em andamento)
+* **created_at**: Data e hora de criação do registro
+* **updated_at**: Data e hora da última atualização do registro
+
+#### **Relacionamentos e Cardinalidades**
+
+1. **Rooms → Room_Types (N:1)**:
+   * Uma sala pertence a exatamente um tipo de sala (1..1)
+   * Um tipo de sala pode estar associado a várias salas (0..N)
+   * Cardinalidade: N:1 (Muitas salas para um tipo)
+   * Implementação: Chave estrangeira `room_type_id` na tabela `Rooms` referenciando `Room_Types`
+
+2. **Bookings → Rooms (N:1)**:
+   * Uma reserva está associada a exatamente uma sala (1..1)
+   * Uma sala pode ter várias reservas ao longo do tempo (0..N)
+   * Cardinalidade: N:1 (Muitas reservas para uma sala)
+   * Implementação: Chave estrangeira `room_id` na tabela `Bookings` referenciando `Rooms`
+
+3. **Bookings → Users (N:1)**:
+   * Uma reserva é feita por exatamente um usuário (1..1)
+   * Um usuário pode fazer várias reservas (0..N)
+   * Cardinalidade: N:1 (Muitas reservas para um usuário)
+   * Implementação: Chave estrangeira `user_id` na tabela `Bookings` referenciando `Users`
+
+#### **Índices**
+
+Para otimizar o desempenho das consultas mais frequentes, foram criados os seguintes índices:
+
+* **idx_room_time**: Índice composto nas colunas (room_id, start_time, end_time) para agilizar a verificação de disponibilidade de salas
+* **idx_user**: Índice na coluna user_id para rápida recuperação das reservas de um usuário
+* **idx_start_time**: Índice na coluna start_time para eficiente filtragem de reservas por data/hora
+
+
 ### 3.1.1 BD e Models (Semana 5)
 *Descreva aqui os Models implementados no sistema web*
 
