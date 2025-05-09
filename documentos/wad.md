@@ -56,6 +56,17 @@ O sistema de Reserva de Salas utiliza um modelo relacional composto por quatro e
 
 <img src="/assets/modelo-banco.png" width="100%">
 
+<div align="center">
+
+
+<img src="/assets/modelo-banco.png" width="100%">
+
+<sub>Figura 1 - Modelagem do Banco de Dados</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
 #### **Legenda de Cardinalidade:**
 * (1): Um lado da relação com exatamente uma entidade
 * (N): Lado da relação com muitas entidades (zero ou mais)
