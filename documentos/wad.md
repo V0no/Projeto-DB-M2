@@ -54,7 +54,6 @@ Em síntese, o RoomWise representa uma solução tecnológica para um desafio or
 #### **Diagrama Entidade-Relacionamento (ER)**
 O sistema de Reserva de Salas utiliza um modelo relacional composto por quatro entidades principais: Usuários, Tipos de Sala, Salas e Reservas. Abaixo está representado o diagrama ER que ilustra essas entidades e seus relacionamentos com suas respectivas cardinalidades:
 
-<img src="/assets/modelo-banco.png" width="100%">
 
 <div align="center">
 
