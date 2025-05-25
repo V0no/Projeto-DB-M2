@@ -214,18 +214,91 @@ CREATE INDEX idx_start_time   ON Bookings(start_time);
 
 
 ### 3.1.1 BD e Models (Semana 5)
-*Descreva aqui os Models implementados no sistema web*
+O sistema de reserva de salas implementa quatro models principais que encapsulam a lógica de negócio e interação com o banco de dados, seguindo o padrão MVC (Model-View-Controller).
+
+### **UserController Model**
+Responsável pela gestão completa de usuários do sistema.
+
+**Funcionalidades Implementadas:**
+- **Criação de usuários** com validação de email único e criptografia de senha usando bcrypt
+- **Listagem de usuários** excluindo informações sensíveis como senhas
+- **Busca individual** por ID com validação de existência
+- **Atualização de dados** com verificação de email duplicado
+- **Alteração segura de senhas** verificando a senha atual antes da alteração
+- **Desativação/Reativação** de usuários usando soft delete para preservar histórico
+- **Listagem de reservas** específicas por usuário com dados relacionados de salas
+
+### **RoomController Model**
+Gerencia o cadastro e manutenção das salas físicas disponíveis.
+
+**Funcionalidades Implementadas:**
+- **Cadastro de salas** com validação de dados obrigatórios (nome, capacidade, localização)
+- **Listagem completa** incluindo informações do tipo de sala através de JOIN
+- **Atualização de informações** da sala (capacidade, localização, tipo, status)
+- **Controle de status operacional** específico (disponível/manutenção)
+- **Verificação de disponibilidade** em períodos específicos com detecção de conflitos
+- **Exclusão protegida** impedindo remoção de salas com reservas associadas
+- **Listagem de reservas futuras** por sala específica
+
+### **RoomTypeController Model**
+Administra as categorias e tipos de salas do sistema.
+
+**Funcionalidades Implementadas:**
+- **Cadastro de tipos personalizados** (Sala de Reunião, Auditório, Laboratório, etc.)
+- **Listagem com estatísticas** mostrando quantidade de salas por tipo
+- **Busca individual** com contagem de salas associadas
+- **Atualização de informações** do tipo (nome e descrição)
+- **Exclusão com proteção referencial** impedindo remoção de tipos em uso
+- **Listagem de salas agrupadas** por tipo específico
+
+### **BookingController Model**
+Núcleo principal do sistema, gerencia todas as operações de reserva.
+
+**Funcionalidades Implementadas:**
+- **Criação de reservas** com validação de existência de sala e usuário
+- **Detecção automática de conflitos** de horário para evitar dupla reserva
+- **Listagem completa** com dados relacionados de salas e usuários via JOIN
+- **Busca individual** com informações detalhadas da reserva
+- **Atualização completa** de reservas com revalidação de conflitos
+- **Cancelamento de reservas** alterando apenas o status sem exclusão
+- **Exclusão física** para remoção definitiva quando necessário
+- **Verificação de disponibilidade** geral para períodos específicos
+
+### **DashboardController Model**
+Fornece dados estatísticos e relatórios gerenciais do sistema.
+
+**Funcionalidades Implementadas:**
+- **Estatísticas gerais** com contadores de usuários, salas, tipos e reservas
+- **Distribuição por status** de reservas e salas
+- **Relatório de reservas diárias** para controle operacional
+- **Cálculo de ocupação** de salas por período (semana, mês, ano)
+- **Ranking de usuários** mais ativos do sistema
+- **Métricas de utilização** com horas totais de reserva por usuário
+
 
 ### 3.2. Arquitetura (Semana 5)
 
-*Posicione aqui o diagrama de arquitetura da sua solução de aplicação web. Atualize sempre que necessário.*
+<div align="center">
 
-**Instruções para criação do diagrama de arquitetura**  
-- **Model**: A camada que lida com a lógica de negócios e interage com o banco de dados.
-- **View**: A camada responsável pela interface de usuário.
-- **Controller**: A camada que recebe as requisições, processa as ações e atualiza o modelo e a visualização.
-  
-*Adicione as setas e explicações sobre como os dados fluem entre o Model, Controller e View.*
+
+<img src="/assets/diagrama-arquitetura.png" width="100%">
+
+<sub>Figura 2 - Diagrama de Arquitetura</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+Fluxo de Dados:
+1. Usuário interage com VIEW (clica, preenche)
+2. VIEW envia requisição para CONTROLLER
+3. CONTROLLER processa lógica de negócio
+4. CONTROLLER chama MODEL para acessar dados
+5. MODEL executa queries no BANCO DE DADOS
+6. BANCO retorna dados para MODEL
+7. MODEL retorna dados para CONTROLLER
+8. CONTROLLER formata resposta para VIEW
+9. VIEW exibe resultado para usuário
 
 ### 3.3. Wireframes (Semana 03 - opcional)
 
