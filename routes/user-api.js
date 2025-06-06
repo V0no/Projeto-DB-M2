@@ -1,139 +1,16 @@
-// routes/index.js
+// routes/user-api.js - APIs ESPECÍFICAS PARA USUÁRIOS
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const bcrypt = require('bcrypt');
 
-console.log('🚀 Carregando rotas da API...');
-
-// === ROTAS DE AUTENTICAÇÃO ===
-try {
-  const AuthController = require('../controllers/AuthController');
-  
-  // Rotas de autenticação
-  router.post('/auth/login', AuthController.login);
-  router.get('/auth/me', AuthController.verificarSessao);
-  router.post('/auth/logout', AuthController.logout);
-  router.post('/auth/seed', AuthController.criarUsuariosPadrao);
-  
-  // Rotas de debug (remover em produção)
-  router.post('/auth/debug', AuthController.debugUser);
-  router.post('/auth/verify-password', AuthController.verifyPassword);
-  router.post('/auth/fix-passwords', AuthController.corrigirSenhas);
-  
-  console.log('✅ AuthController carregado com sucesso - Todas as rotas configuradas');
-} catch (error) {
-  console.error('❌ Erro ao carregar AuthController:', error.message);
-  console.log('💡 Certifique-se que o arquivo controllers/AuthController.js existe');
-}
-
-// === ROTAS DE USUÁRIOS ===
-try {
-  const UserController = require('../controllers/UserController');
-  
-  // Rotas GET
-  router.get('/users', UserController.listarUsuarios);
-  router.get('/users/:id', UserController.obterUsuario);
-  router.get('/users/:id/bookings', UserController.listarReservasUsuario);
-  
-  // Rotas POST, PUT, PATCH, DELETE
-  router.post('/users', UserController.criarUsuario);
-  router.put('/users/:id', UserController.atualizarUsuario);
-  router.put('/users/:id/password', UserController.alterarSenha);
-  router.put('/users/:id/profile', UserController.atualizarPerfilProprio);
-  router.patch('/users/:id/deactivate', UserController.desativarUsuario);
-  router.patch('/users/:id/activate', UserController.reativarUsuario);
-  
-  console.log('✅ UserController carregado com sucesso - Todas as rotas configuradas');
-} catch (error) {
-  console.error('❌ Erro ao carregar UserController:', error.message);
-}
-
-// === ROTAS DE SALAS ===
-try {
-  const RoomController = require('../controllers/RoomController');
-  
-  // Rotas GET
-  router.get('/rooms', RoomController.listarSalas);
-  router.get('/rooms/:id', RoomController.obterSala);
-  router.get('/rooms/:id/bookings', RoomController.listarReservasSala);
-  router.get('/rooms/:id/availability', RoomController.verificarDisponibilidadeSala);
-  
-  // Rotas POST, PUT, PATCH, DELETE
-  router.post('/rooms', RoomController.criarSala);
-  router.put('/rooms/:id', RoomController.atualizarSala);
-  router.patch('/rooms/:id/status', RoomController.alterarStatusSala);
-  router.delete('/rooms/:id', RoomController.excluirSala);
-  
-  console.log('✅ RoomController carregado com sucesso - Todas as rotas configuradas');
-} catch (error) {
-  console.error('❌ Erro ao carregar RoomController:', error.message);
-}
-
-// === ROTAS DE TIPOS DE SALA ===
-try {
-  const RoomTypeController = require('../controllers/RoomTypeController');
-  
-  // Rotas GET
-  router.get('/room-types', RoomTypeController.listarTiposSala);
-  router.get('/room-types/:id', RoomTypeController.obterTipoSala);
-  router.get('/room-types/:id/rooms', RoomTypeController.listarSalasPorTipo);
-  
-  // Rotas POST, PUT, DELETE
-  router.post('/room-types', RoomTypeController.criarTipoSala);
-  router.put('/room-types/:id', RoomTypeController.atualizarTipoSala);
-  router.delete('/room-types/:id', RoomTypeController.excluirTipoSala);
-  
-  console.log('✅ RoomTypeController carregado com sucesso - Todas as rotas configuradas');
-} catch (error) {
-  console.error('❌ Erro ao carregar RoomTypeController:', error.message);
-}
-
-// === ROTAS DE RESERVAS ===
-try {
-  const BookingController = require('../controllers/BookingController');
-  
-  // Rotas GET
-  router.get('/bookings', BookingController.listarReservas);
-  router.get('/bookings/:id', BookingController.obterReserva);
-  
-  // Rotas POST, PUT, PATCH, DELETE
-  router.post('/bookings', BookingController.criarReserva);
-  router.put('/bookings/:id', BookingController.editarReserva);
-  router.patch('/bookings/:id/cancel', BookingController.cancelarReserva);
-  router.delete('/bookings/:id', BookingController.excluirReserva);
-  
-  // Rota especial para verificar disponibilidade
-  router.post('/bookings/check-availability', BookingController.verificarDisponibilidade);
-  
-  console.log('✅ BookingController carregado com sucesso - Todas as rotas configuradas');
-} catch (error) {
-  console.error('❌ Erro ao carregar BookingController:', error.message);
-}
-
-// === ROTAS DE DASHBOARD ===
-try {
-  const DashboardController = require('../controllers/DashboardController');
-  
-  // Rotas GET para estatísticas e relatórios
-  router.get('/dashboard/stats', DashboardController.obterEstatisticas);
-  router.get('/dashboard/bookings/today', DashboardController.obterReservasHoje);
-  router.get('/dashboard/rooms/occupancy', DashboardController.obterOcupacaoSalas);
-  router.get('/dashboard/users/top', DashboardController.obterMaioresUsuarios);
-  
-  console.log('✅ DashboardController carregado com sucesso - Todas as rotas configuradas');
-} catch (error) {
-  console.error('❌ Erro ao carregar DashboardController:', error.message);
-}
-
-// === ROTAS ESPECÍFICAS PARA ÁREA DO USUÁRIO ===
-// Estas são as rotas que estavam faltando e causando os erros 500
-
 /**
  * OBTER RESERVAS DO USUÁRIO LOGADO
  * GET /api/user/bookings
  */
-router.get('/user/bookings', async (req, res) => {
+router.get('/bookings', async (req, res) => {
+    // Em uma implementação real, você pegaria o user_id do token/sessão
+    // Por enquanto, vamos pegar do query parameter
     const { user_id } = req.query;
 
     if (!user_id) {
@@ -188,7 +65,7 @@ router.get('/user/bookings', async (req, res) => {
  * CRIAR NOVA RESERVA
  * POST /api/user/bookings
  */
-router.post('/user/bookings', async (req, res) => {
+router.post('/bookings', async (req, res) => {
     const { user_id, room_id, title, description, start_time, end_time } = req.body;
 
     console.log(`📝 Criando nova reserva para usuário ${user_id}`);
@@ -281,7 +158,7 @@ router.post('/user/bookings', async (req, res) => {
  * CANCELAR RESERVA
  * PATCH /api/user/bookings/:id/cancel
  */
-router.patch('/user/bookings/:id/cancel', async (req, res) => {
+router.patch('/bookings/:id/cancel', async (req, res) => {
     const { id } = req.params;
     const { user_id } = req.body;
 
@@ -358,10 +235,137 @@ router.patch('/user/bookings/:id/cancel', async (req, res) => {
 });
 
 /**
+ * ATUALIZAR PERFIL DO USUÁRIO
+ * PUT /api/user/profile
+ */
+router.put('/profile', async (req, res) => {
+    const { user_id, name, phone } = req.body;
+
+    if (!user_id || !name) {
+        return res.status(400).json({
+            success: false,
+            error: 'user_id e name são obrigatórios'
+        });
+    }
+
+    try {
+        console.log(`👤 Atualizando perfil do usuário ${user_id}`);
+
+        const updateQuery = `
+            UPDATE Users 
+            SET name = $1, phone = $2, updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $3
+            RETURNING user_id, name, email, phone, role, created_at, updated_at
+        `;
+
+        const result = await pool.query(updateQuery, [name, phone, user_id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Usuário não encontrado'
+            });
+        }
+
+        const updatedUser = result.rows[0];
+
+        console.log(`✅ Perfil atualizado: ${updatedUser.name}`);
+
+        res.status(200).json({
+            success: true,
+            message: 'Perfil atualizado com sucesso',
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao atualizar perfil:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+/**
+ * ALTERAR SENHA DO USUÁRIO
+ * PUT /api/user/password
+ */
+router.put('/password', async (req, res) => {
+    const { user_id, current_password, new_password } = req.body;
+
+    if (!user_id || !current_password || !new_password) {
+        return res.status(400).json({
+            success: false,
+            error: 'Todos os campos são obrigatórios'
+        });
+    }
+
+    if (new_password.length < 6) {
+        return res.status(400).json({
+            success: false,
+            error: 'Nova senha deve ter pelo menos 6 caracteres'
+        });
+    }
+
+    try {
+        console.log(`🔐 Alterando senha do usuário ${user_id}`);
+
+        // Buscar senha atual
+        const userResult = await pool.query(
+            'SELECT password FROM Users WHERE user_id = $1',
+            [user_id]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Usuário não encontrado'
+            });
+        }
+
+        // Verificar senha atual
+        const isCurrentPasswordValid = await bcrypt.compare(
+            current_password, 
+            userResult.rows[0].password
+        );
+
+        if (!isCurrentPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                error: 'Senha atual incorreta'
+            });
+        }
+
+        // Hash da nova senha
+        const hashedNewPassword = await bcrypt.hash(new_password, 12);
+
+        // Atualizar senha
+        await pool.query(
+            'UPDATE Users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2',
+            [hashedNewPassword, user_id]
+        );
+
+        console.log(`✅ Senha alterada para usuário ${user_id}`);
+
+        res.status(200).json({
+            success: true,
+            message: 'Senha alterada com sucesso'
+        });
+
+    } catch (error) {
+        console.error('❌ Erro ao alterar senha:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno do servidor'
+        });
+    }
+});
+
+/**
  * VERIFICAR DISPONIBILIDADE DE SALAS
  * POST /api/user/check-availability
  */
-router.post('/user/check-availability', async (req, res) => {
+router.post('/check-availability', async (req, res) => {
     const { start_time, end_time } = req.body;
 
     if (!start_time || !end_time) {
@@ -439,7 +443,7 @@ router.post('/user/check-availability', async (req, res) => {
  * ESTATÍSTICAS DO USUÁRIO
  * GET /api/user/stats
  */
-router.get('/user/stats', async (req, res) => {
+router.get('/stats', async (req, res) => {
     const { user_id } = req.query;
 
     if (!user_id) {
@@ -474,6 +478,15 @@ router.get('/user/stats', async (req, res) => {
         `;
         const upcomingResult = await pool.query(upcomingQuery, [user_id]);
 
+        // Reservas passadas
+        const pastQuery = `
+            SELECT COUNT(*) as past 
+            FROM Bookings 
+            WHERE user_id = $1 
+            AND end_time < CURRENT_TIMESTAMP
+        `;
+        const pastResult = await pool.query(pastQuery, [user_id]);
+
         // Data de criação do usuário
         const userQuery = 'SELECT created_at FROM Users WHERE user_id = $1';
         const userResult = await pool.query(userQuery, [user_id]);
@@ -482,6 +495,7 @@ router.get('/user/stats', async (req, res) => {
             total_bookings: parseInt(totalResult.rows[0].total),
             confirmed_bookings: parseInt(confirmedResult.rows[0].confirmed),
             upcoming_bookings: parseInt(upcomingResult.rows[0].upcoming),
+            past_bookings: parseInt(pastResult.rows[0].past),
             member_since: userResult.rows[0]?.created_at || null
         };
 
@@ -501,39 +515,6 @@ router.get('/user/stats', async (req, res) => {
     }
 });
 
-// === ROTA DE SAÚDE DO SISTEMA ===
-router.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    message: 'Sistema de Reservas API funcionando',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-console.log('✅ Rotas específicas de usuário adicionadas');
-
-// === MIDDLEWARE PARA ROTAS NÃO ENCONTRADAS ===
-router.use((req, res) => {
-  console.log(`❌ Rota não encontrada: ${req.method} ${req.path}`);
-  res.status(404).json({ 
-    error: 'Rota não encontrada',
-    path: req.path,
-    method: req.method,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// === MIDDLEWARE PARA TRATAMENTO DE ERROS ===
-router.use((error, req, res, next) => {
-  console.error('💥 Erro na API:', error);
-  res.status(500).json({
-    error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno',
-    timestamp: new Date().toISOString()
-  });
-});
-
-console.log('✅ Todas as rotas da API foram carregadas com sucesso');
+console.log('👤 APIs de usuário carregadas');
 
 module.exports = router;

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Dashboard - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="dashboard-page">
+    <!-- Header Usuário -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Meu Dashboard</h1>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="user-avatar">?</div>
+                <span id="user-name">Carregando...</span>
+                <button class="logout-btn" onclick="logout()">
+                    Sair
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação Usuário -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/user/dashboard" class="nav-link active">
+                Dashboard
+            </a>
+            <a href="/user/bookings" class="nav-link">
+                Minhas Reservas
+            </a>
+            <a href="/user/new-booking" class="nav-link">
+                Nova Reserva
+            </a>
+            <a href="/user/profile" class="nav-link">
+                Perfil
+            </a>
+        </div>
+    </nav>
+
+    <div class="container dashboard-content">
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Mensagem de Boas-vindas -->
+        <div class="section fade-in">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-md);">
+                Olá, <span id="welcome-name">Usuário</span>!
+            </h2>
+            <p>Bem-vindo ao seu painel pessoal. Aqui você pode gerenciar suas reservas e acessar todas as funcionalidades disponíveis.</p>
+        </div>
+
+        <!-- Estatísticas Pessoais -->
+        <div class="stats-grid slide-in-up">
+            <div class="stat-card stat-card-primary">
+                <h3 id="total-reservas" class="stat-number">0</h3>
+                <p class="stat-label">Total de Reservas</p>
+            </div>
+            <div class="stat-card stat-card-success">
+                <h3 id="proximas-reservas" class="stat-number">0</h3>
+                <p class="stat-label">Próximas Reservas</p>
+            </div>
+            <div class="stat-card stat-card-warning">
+                <h3 id="horas-utilizadas" class="stat-number">0h</h3>
+                <p class="stat-label">Horas Utilizadas</p>
+            </div>
+            <div class="stat-card stat-card-info">
+                <h3 id="membro-desde" class="stat-number">-</h3>
+                <p class="stat-label">Membro desde</p>
+            </div>
+        </div>
+
+        <!-- Ações Rápidas -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">
+                Ações Rápidas
+            </h2>
+            <div class="quick-actions">
+                <button class="btn btn-success btn-lg" onclick="novaReserva()">
+                    Fazer Nova Reserva
+                </button>
+                <button class="btn btn-primary" onclick="verReservas()">
+                    Ver Minhas Reservas
+                </button>
+                <button class="btn btn-info" onclick="consultarSalas()">
+                    Consultar Salas
+                </button>
+                <button class="btn btn-secondary" onclick="atualizarDados()">
+                    Atualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Próximas Reservas -->
+        <div class="section slide-in-up">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+                <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">
+                    Suas Próximas Reservas
+                </h2>
+                <button class="btn btn-sm btn-outline-primary" onclick="verTodasReservas()">
+                    Ver Todas
+                </button>
+            </div>
+            <div id="proximas-reservas-lista">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Carregando suas próximas reservas...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Salas Disponíveis -->
+        <div class="section slide-in-up">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+                <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">
+                    Salas Disponíveis Hoje
+                </h2>
+                <button class="btn btn-sm btn-outline-success" onclick="verTodasSalas()">
+                    Ver Todas
+                </button>
+            </div>
+            <div id="salas-disponiveis">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Verificando salas disponíveis...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let usuarioAtual = null;
+        let dadosCarregados = false;
+
+        // Inicialização da página
+        window.onload = function() {
+            console.log('Verificando autenticação...');
+            
+            if (verificarAutenticacao()) {
+                configurarInterface();
+                carregarTodosDados();
+            }
+        };
+
+        // Verificar se usuário está logado
+        function verificarAutenticacao() {
+            try {
+                const dadosUsuario = localStorage.getItem('user');
+                
+                if (!dadosUsuario) {
+                    redirecionarParaLogin('Faça login primeiro!');
+                    return false;
+                }
+                
+                usuarioAtual = JSON.parse(dadosUsuario);
+                
+                if (!usuarioAtual.email) {
+                    redirecionarParaLogin('Sessão inválida! Faça login novamente.');
+                    return false;
+                }
+                
+                console.log('Usuário autenticado:', usuarioAtual.name);
+                return true;
+                
+            } catch (error) {
+                console.error('Erro na verificação:', error);
+                redirecionarParaLogin('Erro na autenticação! Faça login novamente.');
+                return false;
+            }
+        }
+
+        // Redirecionar para login
+        function redirecionarParaLogin(mensagem) {
+            alert(mensagem);
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+        }
+
+        // Configurar elementos da interface
+        function configurarInterface() {
+            // Atualizar nome do usuário
+            document.getElementById('user-name').textContent = usuarioAtual.name;
+            document.getElementById('welcome-name').textContent = usuarioAtual.name;
+            
+            // Configurar avatar com iniciais
+            const iniciais = usuarioAtual.name
+                .split(' ')
+                .map(nome => nome[0])
+                .join('')
+                .substring(0, 2)
+                .toUpperCase();
+            document.getElementById('user-avatar').textContent = iniciais;
+
+            // Verificar se é admin
+            if (usuarioAtual.role === 'admin') {
+                mostrarOfertaAdmin();
+            }
+        }
+
+        // Oferecer área admin para administradores
+        function mostrarOfertaAdmin() {
+            if (confirm('Você é administrador! Deseja acessar a área administrativa?')) {
+                window.location.href = '/admin/dashboard';
+            }
+        }
+
+        // Carregar todos os dados do dashboard
+        async function carregarTodosDados() {
+            try {
+                console.log('Iniciando carregamento dos dados...');
+                
+                // Carregar dados em paralelo para melhor performance
+                await Promise.all([
+                    carregarEstatisticas(),
+                    carregarProximasReservas(),
+                    carregarSalasDisponiveis()
+                ]);
+                
+                dadosCarregados = true;
+                console.log('Todos os dados carregados com sucesso');
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                mostrarAlerta('Erro ao carregar alguns dados. Tente atualizar a página.', 'warning');
+            }
+        }
+
+        // Carregar estatísticas do usuário
+        async function carregarEstatisticas() {
+            try {
+                console.log('Carregando estatísticas...');
+                
+                // Buscar todas as reservas do sistema
+                const todasReservas = await chamarAPI('/bookings');
+                const userId = usuarioAtual.user_id || usuarioAtual.id;
+                
+                // Filtrar reservas do usuário atual
+                const reservasUsuario = todasReservas.filter(reserva => 
+                    reserva.user_id == userId
+                );
+
+                const agora = new Date();
+                
+                // Calcular estatísticas
+                const totalReservas = reservasUsuario.length;
+                
+                const proximasReservas = reservasUsuario.filter(reserva => 
+                    new Date(reserva.start_time) > agora && 
+                    reserva.status === 'confirmed'
+                ).length;
+                
+                const horasUtilizadas = reservasUsuario.reduce((total, reserva) => {
+                    if (reserva.status === 'confirmed') {
+                        const inicio = new Date(reserva.start_time);
+                        const fim = new Date(reserva.end_time);
+                        return total + (fim - inicio) / (1000 * 60 * 60);
+                    }
+                    return total;
+                }, 0);
+
+                // Buscar dados do usuário para data de criação
+                const dadosUsuario = await chamarAPI(`/users/${userId}`);
+                const membroDesde = dadosUsuario.created_at 
+                    ? new Date(dadosUsuario.created_at).toLocaleDateString('pt-BR', { 
+                        month: 'short', 
+                        year: 'numeric' 
+                    })
+                    : 'N/A';
+                
+                // Atualizar interface
+                document.getElementById('total-reservas').textContent = totalReservas;
+                document.getElementById('proximas-reservas').textContent = proximasReservas;
+                document.getElementById('horas-utilizadas').textContent = horasUtilizadas.toFixed(1) + 'h';
+                document.getElementById('membro-desde').textContent = membroDesde;
+                
+                console.log(`Estatísticas: ${totalReservas} total, ${proximasReservas} próximas`);
+                
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+                
+                // Valores de erro
+                ['total-reservas', 'proximas-reservas', 'horas-utilizadas', 'membro-desde'].forEach(id => {
+                    document.getElementById(id).textContent = '-';
+                });
+            }
+        }
+
+        // Carregar próximas reservas
+        async function carregarProximasReservas() {
+            const container = document.getElementById('proximas-reservas-lista');
+            
+            try {
+                console.log('Carregando próximas reservas...');
+                
+                const todasReservas = await chamarAPI('/bookings');
+                const userId = usuarioAtual.user_id || usuarioAtual.id;
+                const agora = new Date();
+                
+                // Filtrar e ordenar próximas reservas
+                const proximasReservas = todasReservas
+                    .filter(reserva => 
+                        reserva.user_id == userId &&
+                        new Date(reserva.start_time) > agora && 
+                        reserva.status === 'confirmed'
+                    )
+                    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+                    .slice(0, 3); // Mostrar apenas as 3 próximas
+                
+                if (proximasReservas.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-data">
+                            <h4>Nenhuma reserva próxima</h4>
+                            <p>Você não tem reservas agendadas para os próximos dias.</p>
+                            <button class="btn btn-success" onclick="novaReserva()">
+                                Fazer Nova Reserva
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Gerar HTML das reservas
+                let html = '';
+                proximasReservas.forEach(reserva => {
+                    const dataInicio = new Date(reserva.start_time);
+                    const dataFim = new Date(reserva.end_time);
+                    const ehHoje = dataInicio.toDateString() === agora.toDateString();
+                    const ehAmanha = dataInicio.toDateString() === new Date(agora.getTime() + 24*60*60*1000).toDateString();
+                    
+                    let textoData = dataInicio.toLocaleDateString('pt-BR');
+                    if (ehHoje) textoData = 'Hoje';
+                    else if (ehAmanha) textoData = 'Amanhã';
+                    
+                    html += `
+                        <div class="booking-item">
+                            <h4>${reserva.title}</h4>
+                            <div class="booking-details">
+                                <span>Sala: ${reserva.room_name}</span>
+                                <span>Data: ${textoData}</span>
+                                <span>Horário: ${dataInicio.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} - ${dataFim.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</span>
+                            </div>
+                            ${reserva.description ? `<p class="text-muted">${reserva.description}</p>` : ''}
+                            <div class="booking-actions">
+                                ${ehHoje ? '<button class="btn btn-sm btn-success">Check-in</button>' : ''}
+                                <button class="btn btn-sm btn-primary" onclick="verDetalhesReserva(${reserva.booking_id})">Detalhes</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                console.log(`${proximasReservas.length} próximas reservas carregadas`);
+                
+            } catch (error) {
+                console.error('Erro ao carregar próximas reservas:', error);
+                container.innerHTML = `
+                    <div class="error-state">
+                        <h4>Erro ao carregar reservas</h4>
+                        <p>Não foi possível carregar suas próximas reservas.</p>
+                        <button class="btn btn-primary" onclick="carregarProximasReservas()">
+                            Tentar Novamente
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Carregar salas disponíveis
+        async function carregarSalasDisponiveis() {
+            const container = document.getElementById('salas-disponiveis');
+            
+            try {
+                console.log('Carregando salas disponíveis...');
+                
+                const todasSalas = await chamarAPI('/rooms');
+                const salasDisponiveis = todasSalas.filter(sala => sala.status === 'available');
+                
+                if (salasDisponiveis.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-data">
+                            <h4>Nenhuma sala disponível</h4>
+                            <p>Todas as salas estão em manutenção no momento.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Mostrar apenas as primeiras 4 salas
+                const salasParaMostrar = salasDisponiveis.slice(0, 4);
+                
+                let html = '<div class="room-selection">';
+                
+                salasParaMostrar.forEach(sala => {
+                    html += `
+                        <div class="room-card" onclick="verificarDisponibilidade(${sala.room_id}, '${sala.name}')">
+                            <div class="room-title">${sala.name}</div>
+                            <div class="room-details">
+                                <div class="detail-item">
+                                    <span>${sala.capacity} pessoas</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span>${sala.location}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span>${sala.room_type_name || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="room-status available">Disponível</div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                
+                if (salasDisponiveis.length > 4) {
+                    html += `
+                        <div style="text-align: center; margin-top: 15px;">
+                            <p class="text-muted">E mais ${salasDisponiveis.length - 4} sala(s) disponível(is)</p>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+                console.log(`${salasDisponiveis.length} salas disponíveis carregadas`);
+                
+            } catch (error) {
+                console.error('Erro ao carregar salas:', error);
+                container.innerHTML = `
+                    <div class="error-state">
+                        <h4>Erro ao carregar salas</h4>
+                        <p>Não foi possível carregar as salas disponíveis.</p>
+                        <button class="btn btn-primary" onclick="carregarSalasDisponiveis()">
+                            Tentar Novamente
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Função auxiliar para chamadas de API
+        async function chamarAPI(endpoint) {
+            try {
+                const response = await fetch(`/api${endpoint}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                return await response.json();
+                
+            } catch (error) {
+                console.error(`Erro na API ${endpoint}:`, error);
+                throw new Error(`Erro ao acessar ${endpoint}: ${error.message}`);
+            }
+        }
+
+        // Mostrar alertas
+        function mostrarAlerta(mensagem, tipo = 'info') {
+            const alerta = document.getElementById('alert');
+            alerta.className = `alert alert-${tipo}`;
+            alerta.innerHTML = mensagem;
+            alerta.style.display = 'block';
+            
+            if (tipo === 'success') {
+                setTimeout(() => {
+                    alerta.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Funções de navegação
+        function novaReserva() {
+            window.location.href = '/user/new-booking';
+        }
+
+        function verReservas() {
+            window.location.href = '/user/bookings';
+        }
+
+        function verTodasReservas() {
+            window.location.href = '/user/bookings';
+        }
+
+        function verTodasSalas() {
+            window.location.href = '/user/new-booking';
+        }
+
+        function consultarSalas() {
+            // Scroll suave para a seção de salas
+            document.getElementById('salas-disponiveis').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+        }
+
+        // Atualizar todos os dados
+        function atualizarDados() {
+            mostrarAlerta('Atualizando dados...', 'info');
+            carregarTodosDados().then(() => {
+                mostrarAlerta('Dados atualizados com sucesso!', 'success');
+            });
+        }
+
+        // Verificar disponibilidade de sala
+        async function verificarDisponibilidade(salaId, nomeSala) {
+            try {
+                const hoje = new Date().toISOString().split('T')[0];
+                const response = await fetch(`/api/rooms/${salaId}/availability?start_time=${hoje}T09:00:00&end_time=${hoje}T18:00:00`);
+                const resultado = await response.json();
+                
+                if (resultado.available) {
+                    mostrarAlerta(`A sala "${nomeSala}" está disponível hoje! Você pode reservá-la entre 09:00 e 18:00.`, 'success');
+                } else {
+                    const motivo = resultado.reason || 'Há conflitos de horário';
+                    mostrarAlerta(`A sala "${nomeSala}" tem restrições hoje. Motivo: ${motivo}`, 'warning');
+                }
+            } catch (error) {
+                mostrarAlerta(`Erro ao verificar disponibilidade: ${error.message}`, 'danger');
+            }
+        }
+
+        // Ver detalhes de uma reserva
+        function verDetalhesReserva(reservaId) {
+            // Por enquanto, redireciona para a página de reservas
+            // Futuramente pode abrir um modal
+            window.location.href = `/user/bookings?highlight=${reservaId}`;
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Tem certeza que deseja sair?')) {
+                localStorage.removeItem('user');
+                sessionStorage.clear();
+                mostrarAlerta('Logout realizado com sucesso!', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 1000);
+            }
+        }
+    </script>
+</body>
+</html>

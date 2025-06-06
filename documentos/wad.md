@@ -319,7 +319,284 @@ Fluxo de Dados:
 
 ### 3.7 Interface e Navegação (Semana 07)
 
-*Descreva e ilustre aqui o desenvolvimento do frontend do sistema web, explicando brevemente o que foi entregue em termos de código e sistema. Utilize prints de tela para ilustrar.*
+O frontend do sistema foi desenvolvido utilizando uma arquitetura modular de CSS, dividida em componentes reutilizáveis que garantem consistência visual e facilidade de manutenção.
+
+**Estrutura dos Estilos**
+
+A organização dos estilos segue uma arquitetura componentizada:
+
+```
+public/css/
+├── main.css              # Arquivo principal que importa todos os componentes
+├── base.css             # Reset, variáveis CSS e estilos fundamentais
+└── components/
+    ├── buttons.css      # Sistema de botões padronizados
+    ├── forms.css        # Formulários e elementos de entrada
+    ├── alerts.css       # Alertas, notificações e badges
+    └── layout.css       # Componentes de layout (header, nav, cards)
+```
+
+**Sistema de Variáveis CSS**
+
+Implementou-se um sistema robusto de variáveis CSS para garantir consistência:
+
+**Paleta de Cores:**
+- Cores primárias: Verde (#28a745) com variações
+- Cores de status: Sucesso, perigo, aviso e informação
+- Escala de cinzas: 10 tons padronizados
+- Cores administrativas: Diferenciação visual para área admin
+
+**Espaçamentos e Dimensões:**
+- Sistema de espaçamento: xs, sm, md, lg, xl, xxl
+- Bordas e raios: Padronização de border-radius
+- Sombras: 4 níveis de elevação (sm, md, lg, xl)
+- Transições: Velocidades padronizadas (fast, normal, slow)
+
+**Interfaces Desenvolvidas**
+
+1. **Área de Autenticação**
+   - **Login:** Interface limpa com gradiente verde, suporte a sessões ativas
+   - **Registro:** Formulário expansivo com validação em tempo real
+   - **Características:** Responsiva, com credenciais de demonstração visíveis
+
+2. **Dashboard do Usuário**
+   - **Layout:** Design em cards com estatísticas pessoais
+   - **Componentes:** Ações rápidas, próximas reservas, salas disponíveis
+   - **Funcionalidades:** Verificação de disponibilidade em tempo real
+
+3. **Gerenciamento de Reservas**
+   - **Lista de Reservas:** Tabela responsiva com filtros avançados
+   - **Nova Reserva:** Formulário multi-etapa com verificação de disponibilidade
+   - **Características:** Validação de horários, seleção visual de salas
+
+4. **Perfil do Usuário**
+   - **Informações Pessoais:** Avatar com iniciais, estatísticas de uso
+   - **Edição:** Formulários separados para dados e senha
+   - **Histórico:** Resumo de atividades com dados reais do banco
+
+5. **Área Administrativa**
+   - **Dashboard Admin:** Estatísticas gerais do sistema
+   - **Gestão de Usuários:** CRUD completo com interface simplificada
+   - **Gestão de Salas:** Controle de disponibilidade e tipos
+
+**Sistema de Navegação**
+
+*Navegação Principal*
+- **Header responsivo** com informações do usuário
+- **Barra de navegação** com destaque da página atual
+- **Breadcrumbs** para orientação hierárquica
+
+*Navegação Contextual*
+- **Menus laterais** para configurações avançadas
+- **Ações rápidas** em cards e botões flutuantes
+- **Modal overlays** para ações secundárias
+
+**Componentes Reutilizáveis**
+
+*Sistema de Botões*
+- **Variantes:** Primary, secondary, success, danger, warning, info
+- **Tamanhos:** Small, normal, large, extra-large
+- **Estados:** Normal, hover, disabled, loading
+- **Tipos especiais:** Outline, floating action buttons (FAB), admin
+
+*Sistema de Formulários*
+- **Campos padronizados** com validação visual
+- **Estados de validação** com ícones e cores
+- **Componentes especiais:** File upload, switches, range inputs
+- **Layouts responsivos** com grid system
+
+*Sistema de Alertas*
+- **Tipos:** Info, success, warning, danger
+- **Formatos:** Inline, floating, toast notifications
+- **Características:** Auto-dismiss, ícones, progress bars
+
+*Cards e Layout*
+- **Cards padronizados** com header, body e footer
+- **Grid system** flexível e responsivo
+- **Stat cards** para métricas e estatísticas
+- **Seções organizadas** com títulos e ações
+
+**Responsividade e Acessibilidade**
+
+*Breakpoints Responsivos*
+- **Mobile-first approach** com breakpoints em 576px, 768px, 992px, 1200px
+- **Grid flexível** que se adapta a diferentes tamanhos de tela
+- **Navegação adaptativa** com menus colapsáveis em mobile
+
+*Características de Acessibilidade*
+- **Contraste adequado** seguindo diretrizes WCAG
+- **Focus visível** em todos os elementos interativos
+- **Semântica HTML** apropriada para screen readers
+- **Indicadores de estado** claros e consistentes
+
+**Funcionalidades JavaScript Integradas**
+
+*Validação em Tempo Real*
+- **Formulários interativos** com feedback imediato
+- **Verificação de disponibilidade** antes da submissão
+- **Cálculo automático** de durações e horários
+
+*Estado da Aplicação*
+- **Gerenciamento de sessão** via localStorage
+- **Estados de loading** com spinners animados
+- **Alertas contextuais** com auto-dismiss
+
+*Integração com API*
+- **Chamadas assíncronas** para verificação de dados
+- **Tratamento de erros** com mensagens amigáveis
+- **Atualização dinâmica** de conteúdo sem reload
+
+**Padrões de Design Implementados**
+
+*Consistência Visual*
+- **Tipografia padronizada** com hierarquia clara
+- **Espaçamentos consistentes** usando sistema de grid
+- **Cores semânticas** para diferentes tipos de ação e estado
+
+*Experiência do Usuário*
+- **Feedback visual** para todas as interações
+- **Estados de carregamento** para operações assíncronas
+- **Navegação intuitiva** com breadcrumbs e indicadores
+
+*Performance e Otimização*
+- **CSS modular** para carregamento eficiente
+- **Transições suaves** sem comprometer performance
+- **Sprites de ícones** SVG embutidos para rapidez
+
+**Entregáveis da Semana 07**
+
+**Código Desenvolvido:**
+- Sistema completo de estilos CSS modulares (5 arquivos)
+- 5 páginas principais do usuário totalmente funcionais
+- 3 páginas administrativas com interfaces simplificadas
+- Sistema de componentes reutilizáveis
+
+**Funcionalidades Frontend:**
+- Autenticação visual com persistência de sessão
+- Dashboard interativo com dados em tempo real
+- Formulários avançados com validação multi-etapa
+- Sistema de filtros e busca dinâmica
+- Interfaces responsivas para mobile e desktop
+
+**Integração:**
+- Conectividade completa com API REST desenvolvida
+- Sincronização de dados entre frontend e backend
+- Gerenciamento de estado da aplicação
+- Tratamento robusto de erros e edge cases
+
+
+<div align="center">
+
+
+<img src="/assets/login.png" width="100%">
+
+<sub>Figura 3 - Login</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+<div align="center">
+
+
+<img src="/assets/cadastro.png" width="100%">
+
+<sub>Figura 4 - Cadastro</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+<div align="center">
+
+
+<img src="/assets/loadin-adm.png" width="100%">
+
+<sub>Figura 5 - Loading do Administrador</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+<div align="center">
+
+
+<img src="/assets/home-adm.png" width="100%">
+
+<sub>Figura 6 - Dashboard do Administrador</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+<div align="center">
+
+
+<img src="/assets/room-type-adm.png" width="100%">
+
+<sub>Figura 7 - Tipo de Sala do Administrador</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+<div align="center">
+
+
+<img src="/assets/user-adm.png" width="100%">
+
+<sub>Figura 8 - Usuários do Administrador</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+<div align="center">
+
+
+<img src="/assets/loading-user.png" width="100%">
+
+<sub>Figura 9 - Loading do Usuário</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+<div align="center">
+
+
+<img src="/assets/home-user.png" width="100%">
+
+<sub>Figura 10 - Dashboard do Usuário</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+<div align="center">
+
+
+<img src="/assets/bookings-user.png" width="100%">
+
+<sub>Figura 11 - Reservas do Usuário</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+<div align="center">
+
+
+<img src="/assets/new-booking-user.png" width="100%">
+
+<sub>Figura 12 - Nova Reserva do Usuário</sub>
+
+<sub>Fonte: Autoria própria (2025)</sub>
+
+</div>
+
+<div align="center">
+
 
 ---
 

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Reservas - Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .nav { margin-bottom: 30px; }
+        .nav a { margin-right: 15px; padding: 10px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
+        .section { margin-bottom: 30px; border: 1px solid #ccc; padding: 20px; border-radius: 5px; }
+        button { padding: 8px 15px; margin: 5px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .results { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; min-height: 50px; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <h1>Sistema de Reservas - Dashboard</h1>
+    
+    <!-- Navegação -->
+    <div class="nav">
+        <a href="/">Dashboard</a>
+        <a href="/users">Usuários</a>
+        <a href="/rooms">Salas</a>
+        <a href="/bookings">Reservas</a>
+        <a href="/room-types">Tipos de Sala</a>
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="section">
+        <h2>Estatísticas Gerais</h2>
+        <button onclick="loadStats()">Carregar Estatísticas</button>
+        <div id="stats-results" class="results">Clique em "Carregar Estatísticas" para ver os dados</div>
+    </div>
+
+    <!-- Reservas de Hoje -->
+    <div class="section">
+        <h2>Reservas de Hoje</h2>
+        <button onclick="loadTodayBookings()">Carregar Reservas de Hoje</button>
+        <div id="today-results" class="results">Clique para carregar as reservas de hoje</div>
+    </div>
+
+    <!-- Teste Rápido de APIs -->
+    <div class="section">
+        <h2>Teste Rápido das APIs</h2>
+        <button onclick="testUsers()">Testar Usuários</button>
+        <button onclick="testRooms()">Testar Salas</button>
+        <button onclick="testBookings()">Testar Reservas</button>
+        <button onclick="testRoomTypes()">Testar Tipos</button>
+        <div id="test-results" class="results">Clique nos botões para testar as APIs</div>
+    </div>
+
+    <script>
+        // Função para fazer requisições
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                if (data) options.body = JSON.stringify(data);
+                
+                const response = await fetch(`/api${endpoint}`, options);
+                return await response.json();
+            } catch (error) {
+                throw new Error(`Erro na API: ${error.message}`);
+            }
+        }
+
+        // Carregar estatísticas
+        async function loadStats() {
+            const resultsDiv = document.getElementById('stats-results');
+            resultsDiv.innerHTML = 'Carregando...';
+            
+            try {
+                const stats = await apiCall('/dashboard/stats');
+                resultsDiv.className = 'results success';
+                resultsDiv.innerHTML = `
+                    <h3>Estatísticas:</h3>
+                    <p><strong>Total de Usuários:</strong> ${stats.users?.total || 'N/A'}</p>
+                    <p><strong>Total de Salas:</strong> ${stats.rooms?.total || 'N/A'}</p>
+                    <p><strong>Total de Reservas:</strong> ${stats.bookings?.total || 'N/A'}</p>
+                    <p><strong>Reservas Hoje:</strong> ${stats.bookings?.today || 'N/A'}</p>
+                `;
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.innerHTML = `Erro: ${error.message}`;
+            }
+        }
+
+        // Carregar reservas de hoje
+        async function loadTodayBookings() {
+            const resultsDiv = document.getElementById('today-results');
+            resultsDiv.innerHTML = 'Carregando...';
+            
+            try {
+                const bookings = await apiCall('/dashboard/bookings/today');
+                resultsDiv.className = 'results success';
+                
+                if (bookings.length === 0) {
+                    resultsDiv.innerHTML = '<p>Nenhuma reserva para hoje</p>';
+                } else {
+                    let html = '<h3>Reservas de Hoje:</h3><ul>';
+                    bookings.forEach(booking => {
+                        html += `<li><strong>${booking.title}</strong> - ${booking.room_name} (${booking.user_name})</li>`;
+                    });
+                    html += '</ul>';
+                    resultsDiv.innerHTML = html;
+                }
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.innerHTML = `Erro: ${error.message}`;
+            }
+        }
+
+        // Testes rápidos
+        async function testUsers() {
+            const resultsDiv = document.getElementById('test-results');
+            try {
+                const users = await apiCall('/users');
+                resultsDiv.className = 'results success';
+                resultsDiv.innerHTML = `✅ API Usuários OK - ${users.length} usuários encontrados`;
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.innerHTML = `❌ Erro na API Usuários: ${error.message}`;
+            }
+        }
+
+        async function testRooms() {
+            const resultsDiv = document.getElementById('test-results');
+            try {
+                const rooms = await apiCall('/rooms');
+                resultsDiv.className = 'results success';
+                resultsDiv.innerHTML = `✅ API Salas OK - ${rooms.length} salas encontradas`;
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.innerHTML = `❌ Erro na API Salas: ${error.message}`;
+            }
+        }
+
+        async function testBookings() {
+            const resultsDiv = document.getElementById('test-results');
+            try {
+                const bookings = await apiCall('/bookings');
+                resultsDiv.className = 'results success';
+                resultsDiv.innerHTML = `✅ API Reservas OK - ${bookings.length} reservas encontradas`;
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.innerHTML = `❌ Erro na API Reservas: ${error.message}`;
+            }
+        }
+
+        async function testRoomTypes() {
+            const resultsDiv = document.getElementById('test-results');
+            try {
+                const types = await apiCall('/room-types');
+                resultsDiv.className = 'results success';
+                resultsDiv.innerHTML = `✅ API Tipos OK - ${types.length} tipos encontrados`;
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.innerHTML = `❌ Erro na API Tipos: ${error.message}`;
+            }
+        }
+
+        // Carregar estatísticas automaticamente
+        window.onload = () => loadStats();
+    </script>
+</body>
+</html>

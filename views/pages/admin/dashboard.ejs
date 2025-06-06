@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="dashboard-page">
+    <!-- Header Admin -->
+    <header class="header header-admin">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Painel Administrativo</h1>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="admin-avatar">A</div>
+                <span id="admin-name">Carregando...</span>
+                <button class="logout-btn" onclick="logout()">
+                    Sair
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação Admin -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/admin/dashboard" class="nav-link admin-active">
+                Dashboard
+            </a>
+            <a href="/admin/users" class="nav-link">
+                Usuários
+            </a>
+            <a href="/admin/rooms" class="nav-link">
+                Salas
+            </a>
+            <a href="/admin/bookings" class="nav-link">
+                Reservas
+            </a>
+            <a href="/admin/room-types" class="nav-link">
+                Tipos
+            </a>
+            <a href="/admin/reports" class="nav-link">
+                Relatórios
+            </a>
+        </div>
+    </nav>
+
+    <div class="container dashboard-content">
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Mensagem de Boas-vindas Admin -->
+        <div class="section fade-in">
+            <h2 style="background: transparent !important; color: white !important; padding: 0; margin-bottom: var(--spacing-md);">
+                <strong>Bem-vindo, <span id="welcome-admin">Administrador</span>!</strong>
+            </h2>
+            <p style="color: white !important; font-size: 1.1rem;">Painel administrativo com controle total do sistema de reservas. Gerencie usuários, salas e monitore todas as atividades.</p>
+        </div>
+
+        <!-- Estatísticas Admin -->
+        <div class="stats-grid slide-in-up">
+            <div class="stat-card stat-card-primary">
+                <h3 id="total-users" class="stat-number">-</h3>
+                <p class="stat-label">Total de Usuários</p>
+            </div>
+            <div class="stat-card stat-card-success">
+                <h3 id="total-rooms" class="stat-number">-</h3>
+                <p class="stat-label">Salas Cadastradas</p>
+            </div>
+            <div class="stat-card stat-card-warning">
+                <h3 id="total-bookings" class="stat-number">-</h3>
+                <p class="stat-label">Total de Reservas</p>
+            </div>
+            <div class="stat-card stat-card-danger">
+                <h3 id="today-bookings" class="stat-number">-</h3>
+                <p class="stat-label">Reservas Hoje</p>
+            </div>
+        </div>
+
+        <!-- Ações Rápidas Admin -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent !important; color: white !important; padding: 0; margin-bottom: var(--spacing-lg);">
+                Ações Rápidas
+            </h2>
+            <div class="quick-actions">
+                <button class="btn btn-admin btn-lg" onclick="window.location.href='/admin/users'">
+                    Novo Usuário
+                </button>
+                <button class="btn btn-success" onclick="window.location.href='/admin/rooms'">
+                    Nova Sala
+                </button>
+                <button class="btn btn-primary" onclick="window.location.href='/admin/bookings'">
+                    Nova Reserva
+                </button>
+                <button class="btn btn-secondary" onclick="loadStats()">
+                    Atualizar Dados
+                </button>
+            </div>
+        </div>
+
+        <!-- Status do Sistema -->
+        <div class="section slide-in-up">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+                <h2 style="background: transparent !important; color: white !important; padding: 0; margin: 0;">
+                    Status do Sistema
+                </h2>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadStats()">
+                    Atualizar
+                </button>
+            </div>
+            
+            <div class="quick-actions" style="margin-bottom: var(--spacing-lg);">
+                <button class="btn btn-info" onclick="testSystemHealth()">
+                    Verificar Saúde
+                </button>
+                <button class="btn btn-warning" onclick="loadTodayBookings()">
+                    Reservas Hoje
+                </button>
+                <button class="btn btn-success" onclick="loadTopUsers()">
+                    Top Usuários
+                </button>
+            </div>
+            
+            <div id="system-results" class="alert alert-info">
+                Clique nos botões acima para verificar o status do sistema
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAdmin = null;
+
+        // Verificar autenticação admin
+        function checkAdminAuth() {
+            try {
+                const userStr = localStorage.getItem('user');
+                if (!userStr) {
+                    alert('Faça login primeiro!');
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                const user = JSON.parse(userStr);
+                if (!user.email) {
+                    alert('Sessão inválida! Faça login novamente.');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                if (user.role !== 'admin') {
+                    alert('Acesso negado! Área restrita para administradores.');
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                currentAdmin = user;
+                return user;
+            } catch (error) {
+                console.error('Erro na verificação de auth:', error);
+                alert('Erro na autenticação! Faça login novamente.');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+                return null;
+            }
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Tem certeza que deseja sair?')) {
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+        }
+
+        // API calls
+        async function apiCall(endpoint) {
+            try {
+                const response = await fetch(`/api${endpoint}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                throw new Error(`Erro na API: ${error.message}`);
+            }
+        }
+
+        // Mostrar resultado no sistema
+        function showResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('system-results');
+            resultsDiv.className = `alert alert-${type}`;
+            resultsDiv.innerHTML = message;
+        }
+
+        // Carregar estatísticas
+        async function loadStats() {
+            showResult('Carregando estatísticas administrativas...', 'info');
+            try {
+                // Buscar dados das APIs existentes
+                const users = await apiCall('/users');
+                const rooms = await apiCall('/rooms');
+                const bookings = await apiCall('/bookings');
+                
+                // Calcular estatísticas
+                const today = new Date().toISOString().split('T')[0];
+                const todayBookings = bookings.filter(booking => 
+                    booking.start_time.startsWith(today)
+                ).length;
+                
+                // Atualizar interface
+                document.getElementById('total-users').textContent = users.length;
+                document.getElementById('total-rooms').textContent = rooms.length;
+                document.getElementById('total-bookings').textContent = bookings.length;
+                document.getElementById('today-bookings').textContent = todayBookings;
+                
+                showResult('Estatísticas atualizadas com sucesso!', 'success');
+                showAlert('Dados administrativos atualizados!', 'success');
+            } catch (error) {
+                showResult(`Erro ao carregar estatísticas: ${error.message}`, 'danger');
+                showAlert(`Erro: ${error.message}`, 'danger');
+            }
+        }
+
+        // Testar saúde do sistema
+        async function testSystemHealth() {
+            showResult('Verificando saúde do sistema...', 'info');
+            try {
+                const users = await apiCall('/users');
+                const rooms = await apiCall('/rooms');
+                const bookings = await apiCall('/bookings');
+                
+                let message = `
+                    <h4>Status do Sistema:</h4>
+                    <p><strong>Servidor:</strong> Online e funcionando</p>
+                    <p><strong>API Usuários:</strong> ${users.length} registros</p>
+                    <p><strong>API Salas:</strong> ${rooms.length} registros</p>
+                    <p><strong>API Reservas:</strong> ${bookings.length} registros</p>
+                    <p><strong>Última verificação:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+                `;
+                
+                showResult(message, 'success');
+            } catch (error) {
+                showResult(`Problema no sistema: ${error.message}`, 'danger');
+            }
+        }
+
+        // Carregar reservas de hoje
+        async function loadTodayBookings() {
+            showResult('Carregando reservas de hoje...', 'info');
+            try {
+                const bookings = await apiCall('/bookings');
+                const today = new Date().toISOString().split('T')[0];
+                const todayBookings = bookings.filter(booking => 
+                    booking.start_time.startsWith(today)
+                );
+                
+                let message = `<h4>Reservas de Hoje: ${todayBookings.length}</h4>`;
+                
+                if (todayBookings.length === 0) {
+                    message += '<p>Nenhuma reserva para hoje</p>';
+                } else {
+                    message += '<ul>';
+                    todayBookings.slice(0, 5).forEach(booking => {
+                        const startTime = new Date(booking.start_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+                        message += `<li><strong>${booking.title}</strong> - ${booking.room_name} às ${startTime}</li>`;
+                    });
+                    message += '</ul>';
+                    if (todayBookings.length > 5) {
+                        message += `<p>... e mais ${todayBookings.length - 5} reserva(s)</p>`;
+                    }
+                }
+                
+                showResult(message, 'success');
+            } catch (error) {
+                showResult(`Erro: ${error.message}`, 'danger');
+            }
+        }
+
+        // Carregar usuários mais ativos
+        async function loadTopUsers() {
+            showResult('Carregando usuários mais ativos...', 'info');
+            try {
+                const users = await apiCall('/users');
+                const bookings = await apiCall('/bookings');
+                
+                // Contar reservas por usuário
+                const userBookingCount = {};
+                bookings.forEach(booking => {
+                    userBookingCount[booking.user_id] = (userBookingCount[booking.user_id] || 0) + 1;
+                });
+                
+                // Criar ranking
+                const topUsers = users
+                    .map(user => ({
+                        ...user,
+                        total_bookings: userBookingCount[user.user_id] || 0
+                    }))
+                    .sort((a, b) => b.total_bookings - a.total_bookings)
+                    .slice(0, 5);
+                
+                let message = '<h4>Top 5 Usuários Mais Ativos:</h4><ul>';
+                
+                topUsers.forEach((user, index) => {
+                    message += `<li>${index + 1}. <strong>${user.name}</strong> - ${user.total_bookings} reservas</li>`;
+                });
+                message += '</ul>';
+                
+                showResult(message, 'success');
+            } catch (error) {
+                showResult(`Erro: ${error.message}`, 'danger');
+            }
+        }
+
+        // Inicialização
+        window.onload = function() {
+            console.log('Verificando autenticação admin...');
+            if (checkAdminAuth()) {
+                console.log('Admin autenticado:', currentAdmin.name);
+                document.getElementById('admin-name').textContent = currentAdmin.name;
+                document.getElementById('welcome-admin').textContent = currentAdmin.name;
+                
+                // Configurar avatar com iniciais
+                const iniciais = currentAdmin.name
+                    .split(' ')
+                    .map(nome => nome[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+                document.getElementById('admin-avatar').textContent = iniciais;
+                
+                // Carregar dados iniciais
+                loadStats();
+            }
+        };
+    </script>
+</body>
+</html>

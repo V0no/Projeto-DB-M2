@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tipos de Sala - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="dashboard-page">
+    <!-- Header Admin -->
+    <header class="header header-admin">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Administração - Gerenciar Tipos de Sala</h1>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="admin-avatar">A</div>
+                <span id="admin-name">Carregando...</span>
+                <button class="logout-btn" onclick="logout()">
+                    Sair
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação Admin -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/admin/dashboard" class="nav-link">
+                Dashboard
+            </a>
+            <a href="/admin/users" class="nav-link">
+                Usuários
+            </a>
+            <a href="/admin/rooms" class="nav-link">
+                Salas
+            </a>
+            <a href="/admin/bookings" class="nav-link">
+                Reservas
+            </a>
+            <a href="/admin/room-types" class="nav-link admin-active">
+                Tipos
+            </a>
+        </div>
+    </nav>
+
+    <div class="container dashboard-content">
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Criar Novo Tipo -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">
+                Criar Novo Tipo de Sala
+            </h2>
+            <form id="createTypeForm" class="form">
+                <div class="form-group">
+                    <label for="typeName" class="form-label required">Nome do Tipo:</label>
+                    <input type="text" id="typeName" class="form-control" placeholder="ex: Sala de Reunião" required>
+                </div>
+                <div class="form-group">
+                    <label for="typeDescription" class="form-label">Descrição (opcional):</label>
+                    <textarea id="typeDescription" class="form-control" rows="3" placeholder="Descrição do tipo de sala..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-success">Criar Tipo</button>
+            </form>
+            <div id="create-results" class="results" style="display: none;"></div>
+        </div>
+
+        <!-- Lista de Tipos -->
+        <div class="section slide-in-up">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+                <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">
+                    Lista de Tipos de Sala
+                </h2>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadRoomTypes()">
+                    Carregar Tipos
+                </button>
+            </div>
+            <div id="types-container">
+                <div id="types-results" class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Carregando tipos...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Verificar autenticação admin
+        function checkAdminAuth() {
+            try {
+                const userStr = localStorage.getItem('user');
+                if (!userStr) {
+                    alert('Faça login primeiro!');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                const user = JSON.parse(userStr);
+                if (!user.email) {
+                    alert('Sessão inválida! Faça login novamente.');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                if (user.role !== 'admin') {
+                    alert('Acesso restrito para administradores!');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                currentUser = user;
+                return true;
+            } catch (error) {
+                console.error('Erro na verificação de auth:', error);
+                alert('Erro na autenticação! Faça login novamente.');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Tem certeza que deseja sair?')) {
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+        }
+
+        // API calls
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                if (data) options.body = JSON.stringify(data);
+                
+                const response = await fetch(`/api${endpoint}`, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP ${response.status}`);
+                }
+                
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Criar tipo de sala
+        document.getElementById('createTypeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!checkAdminAuth()) return;
+            
+            const resultsDiv = document.getElementById('create-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.className = 'alert alert-info';
+            resultsDiv.innerHTML = 'Criando tipo...';
+            
+            const typeData = {
+                name: document.getElementById('typeName').value.trim(),
+                description: document.getElementById('typeDescription').value.trim()
+            };
+
+            if (!typeData.name) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = 'Por favor, preencha o nome do tipo';
+                return;
+            }
+
+            try {
+                const type = await apiCall('/room-types', 'POST', typeData);
+                resultsDiv.className = 'alert alert-success';
+                resultsDiv.innerHTML = `Tipo criado: <strong>${type.name}</strong> (ID: ${type.room_type_id})`;
+                
+                // Limpar formulário
+                document.getElementById('typeName').value = '';
+                document.getElementById('typeDescription').value = '';
+                
+                showAlert('Tipo de sala criado com sucesso!', 'success');
+                loadRoomTypes();
+            } catch (error) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = `Erro: ${error.message}`;
+                showAlert(`Erro ao criar tipo: ${error.message}`, 'danger');
+            }
+        });
+
+        // Carregar tipos de sala
+        async function loadRoomTypes() {
+            if (!checkAdminAuth()) return;
+            
+            const resultsDiv = document.getElementById('types-results');
+            resultsDiv.className = 'loading-state';
+            resultsDiv.innerHTML = '<div class="loading-spinner"></div><p>Carregando tipos...</p>';
+            
+            try {
+                const types = await apiCall('/room-types');
+                
+                if (types.length === 0) {
+                    resultsDiv.className = 'no-data';
+                    resultsDiv.innerHTML = `
+                        <h3>Nenhum tipo encontrado</h3>
+                        <p>Crie o primeiro tipo de sala no formulário acima.</p>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <div class="alert alert-info" style="margin-bottom: var(--spacing-lg);">
+                        <strong>Total: ${types.length} tipos encontrados</strong>
+                    </div>
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Descrição</th>
+                                    <th>Total de Salas</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                types.forEach(type => {
+                    html += `
+                        <tr>
+                            <td>${type.room_type_id}</td>
+                            <td><strong>${type.name}</strong></td>
+                            <td>${type.description || '<em>Sem descrição</em>'}</td>
+                            <td><span class="badge badge-primary">${type.total_rooms} salas</span></td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="btn btn-sm btn-info" onclick="viewTypeRooms(${type.room_type_id})">Ver Salas</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteRoomType(${type.room_type_id}, '${type.name}')">Excluir</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table></div>';
+                resultsDiv.innerHTML = html;
+                resultsDiv.className = '';
+            } catch (error) {
+                resultsDiv.className = 'error-state';
+                resultsDiv.innerHTML = `
+                    <h3>Erro ao carregar tipos</h3>
+                    <p>${error.message}</p>
+                    <button class="btn btn-primary" onclick="loadRoomTypes()">Tentar Novamente</button>
+                `;
+            }
+        }
+
+        // Ver salas do tipo
+        async function viewTypeRooms(typeId) {
+            if (!checkAdminAuth()) return;
+            
+            try {
+                const result = await apiCall(`/room-types/${typeId}/rooms`);
+                let message = `Tipo: "${result.room_type.name}"\n`;
+                message += `Total de salas: ${result.rooms.length}\n\n`;
+                
+                if (result.rooms.length > 0) {
+                    message += "Salas:\n";
+                    result.rooms.forEach(room => {
+                        message += `• ${room.name} (Capacidade: ${room.capacity})\n`;
+                    });
+                } else {
+                    message += "Nenhuma sala encontrada para este tipo.";
+                }
+                
+                alert(message);
+            } catch (error) {
+                showAlert(`Erro ao carregar salas: ${error.message}`, 'danger');
+            }
+        }
+
+        // Excluir tipo
+        async function deleteRoomType(typeId, typeName) {
+            if (!checkAdminAuth()) return;
+            
+            if (!confirm(`Tem certeza que deseja excluir o tipo "${typeName}"?\n\nAtenção: Só é possível excluir se não houver salas associadas.`)) {
+                return;
+            }
+
+            try {
+                await apiCall(`/room-types/${typeId}`, 'DELETE');
+                showAlert('Tipo excluído com sucesso!', 'success');
+                loadRoomTypes();
+            } catch (error) {
+                showAlert(`Erro ao excluir tipo: ${error.message}`, 'danger');
+            }
+        }
+
+        // Inicialização
+        window.onload = function() {
+            console.log('Verificando autenticação admin...');
+            if (checkAdminAuth()) {
+                console.log('Admin autenticado:', currentUser.name);
+                document.getElementById('admin-name').textContent = currentUser.name;
+                
+                // Configurar avatar
+                const iniciais = currentUser.name
+                    .split(' ')
+                    .map(nome => nome[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+                document.getElementById('admin-avatar').textContent = iniciais;
+                
+                loadRoomTypes();
+            }
+        };
+    </script>
+</body>
+</html>

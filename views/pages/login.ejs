@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container fade-in">
+        <!-- Logo -->
+        <div class="auth-logo">
+            <h1>Sistema de Reservas</h1>
+            <p>Faça login para continuar</p>
+        </div>
+
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Sessão Ativa (se existir) -->
+        <div id="current-session" class="current-session" style="display: none;">
+            <h3>Sessão Ativa Encontrada</h3>
+            <p><strong>Usuário:</strong> <span id="session-user-name"></span></p>
+            <p><strong>Tipo:</strong> <span id="session-user-role"></span></p>
+            <p><strong>Email:</strong> <span id="session-user-email"></span></p>
+            
+            <div class="session-actions">
+                <button class="btn btn-success btn-block" onclick="continueSession()">
+                    Continuar Sessão
+                </button>
+                <button class="btn btn-danger btn-block" onclick="clearSessionAndLogin()">
+                    Fazer Novo Login
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading-state" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Fazendo login...</p>
+        </div>
+
+        <!-- Formulário de Login -->
+        <div id="login-form">
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email" class="form-label required">Email:</label>
+                    <input type="email" id="email" name="email" class="form-control" required 
+                           placeholder="seu@email.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label required">Senha:</label>
+                    <input type="password" id="password" name="password" class="form-control" required 
+                           placeholder="Sua senha">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block btn-lg">
+                    Entrar
+                </button>
+            </form>
+
+            <!-- Espaçamento maior antes das ações rápidas -->
+            <div style="margin-top: 2rem;">
+                <!-- Ações Rápidas -->
+                <div class="quick-actions">
+                    <button type="button" class="btn btn-success btn-sm" onclick="fillAdmin()">
+                        Login Admin
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="clearForm()">
+                        Limpar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Credenciais do Admin -->
+            <div class="admin-credentials">
+                <h4>Conta Administrativa</h4>
+                <div class="credential-item" onclick="fillLogin('admin@sistema.com', 'admin123')">
+                    <strong>Admin:</strong> admin@sistema.com / admin123
+                </div>
+                <p style="font-size: 12px; color: var(--gray-500); margin: 10px 0 0 0;">
+                    Esta conta é criada automaticamente pelo sistema
+                </p>
+            </div>
+
+            <!-- Link para Cadastro -->
+            <div class="auth-link">
+                <p>Não tem uma conta? <a href="/register">Cadastre-se aqui</a></p>
+            </div>
+        </div>
+
+        <!-- Botão para limpar sessão -->
+        <button class="btn btn-secondary btn-block btn-sm" onclick="forceLogout()">
+            Limpar Todas as Sessões
+        </button>
+    </div>
+
+    <script>
+        // Verificar se existe sessão ativa ao carregar
+        window.onload = function() {
+            checkExistingSession();
+            fillEmailFromURL();
+        };
+
+        // Verificar sessão existente
+        function checkExistingSession() {
+            try {
+                const userStr = localStorage.getItem('user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    if (user.email && user.role) {
+                        showCurrentSession(user);
+                        return;
+                    }
+                }
+                
+                showLoginForm();
+            } catch (error) {
+                console.error('Erro ao verificar sessão:', error);
+                localStorage.removeItem('user');
+                showLoginForm();
+            }
+        }
+
+        // Preencher email da URL (vindo do cadastro)
+        function fillEmailFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const email = urlParams.get('email');
+            if (email) {
+                document.getElementById('email').value = email;
+                document.getElementById('password').focus();
+            }
+        }
+
+        // Mostrar sessão atual
+        function showCurrentSession(user) {
+            document.getElementById('current-session').style.display = 'block';
+            document.getElementById('login-form').style.display = 'none';
+            
+            document.getElementById('session-user-name').textContent = user.name;
+            document.getElementById('session-user-email').textContent = user.email;
+            document.getElementById('session-user-role').textContent = user.role === 'admin' ? 'Administrador' : 'Usuário';
+        }
+
+        // Mostrar formulário de login
+        function showLoginForm() {
+            document.getElementById('current-session').style.display = 'none';
+            document.getElementById('login-form').style.display = 'block';
+        }
+
+        // Continuar sessão existente
+        function continueSession() {
+            const user = JSON.parse(localStorage.getItem('user'));
+            redirectUser(user);
+        }
+
+        // Limpar sessão e mostrar login
+        function clearSessionAndLogin() {
+            localStorage.removeItem('user');
+            showAlert('Sessão limpa! Faça um novo login.', 'success');
+            showLoginForm();
+        }
+
+        // Forçar logout completo
+        function forceLogout() {
+            if (confirm('Tem certeza que deseja limpar TODAS as sessões?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                showAlert('Todas as sessões foram limpas!', 'success');
+                showLoginForm();
+                clearForm();
+            }
+        }
+
+        // Preencher campos de login
+        function fillLogin(email, password) {
+            document.getElementById('email').value = email;
+            document.getElementById('password').value = password;
+        }
+
+        // Preencher admin rapidamente
+        function fillAdmin() {
+            fillLogin('admin@sistema.com', 'admin123');
+        }
+
+        // Limpar formulário
+        function clearForm() {
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('email').focus();
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type = 'danger') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 3000);
+            }
+        }
+
+        // Esconder alerta
+        function hideAlert() {
+            document.getElementById('alert').style.display = 'none';
+        }
+
+        // Redirecionar usuário baseado no papel
+        function redirectUser(user) {
+            if (user.role === 'admin') {
+                window.location.href = '/admin/dashboard';
+            } else {
+                window.location.href = '/user/dashboard';
+            }
+        }
+
+        // Submissão do formulário
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideAlert();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                showAlert('Por favor, preencha email e senha');
+                return;
+            }
+            
+            // Mostrar loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('login-form').style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Salvar dados do usuário no localStorage
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    
+                    showAlert(`Bem-vindo(a), ${result.user.name}!`, 'success');
+                    
+                    // Redirecionar após 1 segundo
+                    setTimeout(() => {
+                        redirectUser(result.user);
+                    }, 1000);
+                } else {
+                    showAlert(result.error);
+                    showLoginForm();
+                }
+                
+            } catch (error) {
+                showAlert(`Erro de conexão: ${error.message}`);
+                showLoginForm();
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

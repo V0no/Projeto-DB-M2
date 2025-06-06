@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container fade-in">
+        <!-- Logo -->
+        <div class="auth-logo">
+            <h1>Novo Cadastro</h1>
+            <p>Crie sua conta no Sistema de Reservas</p>
+        </div>
+
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading-state" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Criando sua conta...</p>
+        </div>
+
+        <!-- Formulário de Cadastro -->
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="name" class="form-label required">Nome Completo:</label>
+                <input type="text" id="name" name="name" class="form-control" required 
+                       placeholder="Seu nome completo">
+                <div id="name-validation" class="invalid-feedback" style="display: none;"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="form-label required">Email:</label>
+                <input type="email" id="email" name="email" class="form-control" required 
+                       placeholder="seu@email.com">
+                <div id="email-validation" class="invalid-feedback" style="display: none;"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="phone" class="form-label">Telefone (opcional):</label>
+                <input type="tel" id="phone" name="phone" class="form-control" 
+                       placeholder="(11) 99999-9999">
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label required">Senha:</label>
+                <input type="password" id="password" name="password" class="form-control" required 
+                       placeholder="Mínimo 6 caracteres">
+                <div class="password-strength">
+                    <div class="strength-meter">
+                        <div class="strength-meter-fill"></div>
+                    </div>
+                    <div class="strength-text" style="display: none;"></div>
+                </div>
+                <div id="password-validation" class="invalid-feedback" style="display: none;"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword" class="form-label required">Confirmar Senha:</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" required 
+                       placeholder="Digite a senha novamente">
+                <div id="confirm-validation" class="invalid-feedback" style="display: none;"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="submitBtn">
+                Criar Conta
+            </button>
+        </form>
+
+        <!-- Link para Login -->
+        <div class="auth-link">
+            <p>Já tem uma conta? <a href="/login">Faça login aqui</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Elementos do formulário
+        const form = document.getElementById('registerForm');
+        const nameInput = document.getElementById('name');
+        const emailInput = document.getElementById('email');
+        const phoneInput = document.getElementById('phone');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Função para mostrar alertas
+        function showAlert(message, type = 'danger') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+        }
+
+        // Função para esconder alerta
+        function hideAlert() {
+            document.getElementById('alert').style.display = 'none';
+        }
+
+        // Função para mostrar/esconder loading
+        function toggleLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            form.style.display = show ? 'none' : 'block';
+        }
+
+        // Função para mostrar mensagem de validação
+        function showValidation(inputId, message, isSuccess = false) {
+            const validation = document.getElementById(inputId + '-validation');
+            const input = document.getElementById(inputId);
+            
+            if (message) {
+                validation.textContent = message;
+                validation.style.display = 'block';
+                
+                if (isSuccess) {
+                    validation.className = 'valid-feedback';
+                    input.classList.remove('is-invalid');
+                    input.classList.add('is-valid');
+                } else {
+                    validation.className = 'invalid-feedback';
+                    input.classList.remove('is-valid');
+                    input.classList.add('is-invalid');
+                }
+            } else {
+                validation.style.display = 'none';
+                input.classList.remove('is-valid', 'is-invalid');
+            }
+        }
+
+        // Validação de nome
+        nameInput.addEventListener('blur', function() {
+            const name = this.value.trim();
+            if (name.length < 2) {
+                showValidation('name', 'Nome deve ter pelo menos 2 caracteres');
+            } else if (name.length > 100) {
+                showValidation('name', 'Nome muito longo (máximo 100 caracteres)');
+            } else {
+                showValidation('name', 'Nome válido', true);
+            }
+        });
+
+        // Validação de email em tempo real
+        let emailCheckTimeout;
+        emailInput.addEventListener('input', function() {
+            const email = this.value.trim();
+            
+            // Limpar timeout anterior
+            clearTimeout(emailCheckTimeout);
+            
+            if (!email) {
+                showValidation('email', '');
+                return;
+            }
+            
+            // Validação básica de formato
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showValidation('email', 'Formato de email inválido');
+                return;
+            }
+            
+            // Verificar disponibilidade após 500ms
+            emailCheckTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        if (result.available) {
+                            showValidation('email', 'Email disponível', true);
+                        } else {
+                            showValidation('email', 'Este email já está em uso');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erro ao verificar email:', error);
+                }
+            }, 500);
+        });
+
+        // Validação de força da senha
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            const strengthMeter = document.querySelector('.strength-meter');
+            const strengthFill = document.querySelector('.strength-meter-fill');
+            const strengthText = document.querySelector('.strength-text');
+            
+            if (!password) {
+                strengthFill.style.width = '0%';
+                strengthText.style.display = 'none';
+                showValidation('password', '');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showValidation('password', 'Senha deve ter pelo menos 6 caracteres');
+                strengthFill.style.width = '25%';
+                strengthMeter.className = 'strength-meter strength-weak';
+                strengthText.textContent = 'Muito fraca';
+                strengthText.className = 'strength-text strength-weak';
+                strengthText.style.display = 'block';
+                return;
+            }
+            
+            // Calcular força da senha
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+            if (/\d/.test(password)) strength++;
+            if (/[^a-zA-Z0-9]/.test(password)) strength++;
+            
+            if (strength <= 1) {
+                strengthFill.style.width = '35%';
+                strengthMeter.className = 'strength-meter strength-weak';
+                strengthText.textContent = 'Fraca';
+                strengthText.className = 'strength-text strength-weak';
+                showValidation('password', 'Senha fraca - adicione números e símbolos');
+            } else if (strength <= 2) {
+                strengthFill.style.width = '65%';
+                strengthMeter.className = 'strength-meter strength-medium';
+                strengthText.textContent = 'Média';
+                strengthText.className = 'strength-text strength-medium';
+                showValidation('password', 'Senha razoável', true);
+            } else {
+                strengthFill.style.width = '100%';
+                strengthMeter.className = 'strength-meter strength-strong';
+                strengthText.textContent = 'Forte';
+                strengthText.className = 'strength-text strength-strong';
+                showValidation('password', 'Senha forte', true);
+            }
+            
+            strengthText.style.display = 'block';
+        });
+
+        // Validação de confirmação de senha
+        confirmPasswordInput.addEventListener('input', function() {
+            const password = passwordInput.value;
+            const confirmPassword = this.value;
+            
+            if (!confirmPassword) {
+                showValidation('confirm', '');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showValidation('confirm', 'As senhas não coincidem');
+            } else {
+                showValidation('confirm', 'Senhas coincidem', true);
+            }
+        });
+
+        // Formatação do telefone
+        phoneInput.addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, '');
+            
+            if (value.length <= 11) {
+                if (value.length <= 10) {
+                    value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                } else {
+                    value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                }
+                this.value = value;
+            }
+        });
+
+        // Submissão do formulário
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideAlert();
+            
+            // Coletar dados
+            const formData = {
+                name: nameInput.value.trim(),
+                email: emailInput.value.trim(),
+                phone: phoneInput.value.trim(),
+                password: passwordInput.value,
+                confirmPassword: confirmPasswordInput.value
+            };
+            
+            // Validações finais
+            if (!formData.name || formData.name.length < 2) {
+                showAlert('Nome deve ter pelo menos 2 caracteres');
+                nameInput.focus();
+                return;
+            }
+            
+            if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+                showAlert('Email inválido');
+                emailInput.focus();
+                return;
+            }
+            
+            if (!formData.password || formData.password.length < 6) {
+                showAlert('Senha deve ter pelo menos 6 caracteres');
+                passwordInput.focus();
+                return;
+            }
+            
+            if (formData.password !== formData.confirmPassword) {
+                showAlert('As senhas não coincidem');
+                confirmPasswordInput.focus();
+                return;
+            }
+            
+            // Enviar dados
+            toggleLoading(true);
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`Cadastro realizado com sucesso! Bem-vindo(a), ${result.user.name}! Redirecionando para o login...`, 'success');
+                    
+                    // Redirecionar após 3 segundos
+                    setTimeout(() => {
+                        window.location.href = '/login?email=' + encodeURIComponent(result.user.email);
+                    }, 3000);
+                } else {
+                    showAlert(result.error);
+                }
+                
+            } catch (error) {
+                showAlert(`Erro de conexão: ${error.message}`);
+            } finally {
+                toggleLoading(false);
+            }
+        });
+
+        // Foco inicial no campo nome
+        window.onload = () => nameInput.focus();
+    </script>
+</body>
+</html>

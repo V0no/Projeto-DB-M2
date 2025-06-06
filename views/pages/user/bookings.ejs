@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minhas Reservas - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="dashboard-page">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Minhas Reservas</h1>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="user-avatar">?</div>
+                <span id="user-name">Carregando...</span>
+                <button class="logout-btn" onclick="logout()">
+                    Sair
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/user/dashboard" class="nav-link">
+                Dashboard
+            </a>
+            <a href="/user/bookings" class="nav-link active">
+                Minhas Reservas
+            </a>
+            <a href="/user/new-booking" class="nav-link">
+                Nova Reserva
+            </a>
+            <a href="/user/profile" class="nav-link">
+                Meu Perfil
+            </a>
+        </div>
+    </nav>
+
+    <div class="container dashboard-content">
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Resumo Estatístico -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">Resumo das Reservas</h2>
+            <div class="stats-grid">
+                <div class="stat-card stat-card-primary">
+                    <div id="total-bookings" class="stat-number">-</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-card stat-card-success">
+                    <div id="confirmed-bookings" class="stat-number">-</div>
+                    <div class="stat-label">Confirmadas</div>
+                </div>
+                <div class="stat-card stat-card-warning">
+                    <div id="upcoming-bookings" class="stat-number">-</div>
+                    <div class="stat-label">Próximas</div>
+                </div>
+                <div class="stat-card stat-card-info">
+                    <div id="past-bookings" class="stat-number">-</div>
+                    <div class="stat-label">Passadas</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="section slide-in-up">
+            <h3 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">Filtrar Reservas</h3>
+            <div class="form-filters">
+                <div class="form-group">
+                    <label for="statusFilter" class="form-label">Status:</label>
+                    <select id="statusFilter" class="form-control">
+                        <option value="">Todos os Status</option>
+                        <option value="confirmed">Confirmadas</option>
+                        <option value="cancelled">Canceladas</option>
+                        <option value="in_progress">Em Andamento</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="periodFilter" class="form-label">Período:</label>
+                    <select id="periodFilter" class="form-control">
+                        <option value="">Todos os Períodos</option>
+                        <option value="upcoming">Próximas</option>
+                        <option value="today">Hoje</option>
+                        <option value="week">Esta Semana</option>
+                        <option value="month">Este Mês</option>
+                        <option value="past">Passadas</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="dateFilter" class="form-label">Data específica:</label>
+                    <input type="date" id="dateFilter" class="form-control" placeholder="Data específica">
+                </div>
+                
+                <div class="form-group">
+                    <button class="btn btn-primary" onclick="applyFilters()">Filtrar</button>
+                    <button class="btn btn-warning" onclick="clearFilters()">Limpar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading-state" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Carregando suas reservas...</p>
+        </div>
+
+        <!-- Lista de Reservas -->
+        <div class="section slide-in-up">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+                <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">Suas Reservas</h2>
+                <button class="btn btn-success" onclick="window.location.href='/user/new-booking'">
+                    Nova Reserva
+                </button>
+            </div>
+            
+            <div id="bookings-container">
+                <!-- Reservas serão carregadas aqui -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let allBookings = [];
+
+        // Verificar autenticação
+        function checkUserAuth() {
+            try {
+                const userStr = localStorage.getItem('user');
+                if (!userStr) {
+                    alert('Faça login primeiro!');
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                const user = JSON.parse(userStr);
+                if (!user.email) {
+                    alert('Sessão inválida! Faça login novamente.');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                currentUser = user;
+                return user;
+            } catch (error) {
+                console.error('Erro na verificação de auth:', error);
+                alert('Erro na autenticação! Faça login novamente.');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+                return null;
+            }
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Tem certeza que deseja sair?')) {
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        // Mostrar/esconder loading
+        function toggleLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type = 'danger') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+        }
+
+        // Carregar reservas do usuário REAL
+        async function loadUserBookings() {
+            if (!currentUser) return;
+
+            toggleLoading(true);
+
+            try {
+                const userId = currentUser.user_id || currentUser.id;
+                console.log(`Carregando reservas do usuário ${userId}`);
+                
+                // API REAL - usando endpoint correto
+                const response = await fetch(`/api/user/bookings?user_id=${userId}`);
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Erro ao carregar reservas');
+                }
+                
+                allBookings = result.bookings || [];
+                console.log(`${allBookings.length} reservas carregadas do banco`);
+
+                displayBookings(allBookings);
+                updateStats(allBookings);
+
+            } catch (error) {
+                console.error('Erro ao carregar reservas:', error);
+                showAlert(`Erro ao carregar reservas: ${error.message}`);
+                
+                // Mostrar mensagem amigável se não conseguir carregar
+                document.getElementById('bookings-container').innerHTML = `
+                    <div class="no-data">
+                        <h3>Erro ao carregar reservas</h3>
+                        <p>Não foi possível carregar suas reservas. Tente novamente.</p>
+                        <button class="btn btn-primary" onclick="loadUserBookings()">Tentar Novamente</button>
+                    </div>
+                `;
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Exibir reservas
+        function displayBookings(bookings) {
+            const container = document.getElementById('bookings-container');
+
+            if (bookings.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <h3>Nenhuma reserva encontrada</h3>
+                        <p>Você ainda não fez nenhuma reserva ou nenhuma reserva corresponde aos filtros aplicados.</p>
+                        <button class="btn btn-success" onclick="window.location.href='/user/new-booking'">
+                            Fazer Primeira Reserva
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+
+            bookings.forEach(booking => {
+                const startDate = new Date(booking.start_time);
+                const endDate = new Date(booking.end_time);
+                const now = new Date();
+                const isUpcoming = startDate > now;
+                const isPast = endDate < now;
+                const isToday = startDate.toDateString() === now.toDateString();
+
+                html += `
+                    <div class="booking-item">
+                        <div class="booking-header">
+                            <h4 class="booking-title">${booking.title}</h4>
+                            <span class="booking-status booking-status-${booking.status}">
+                                ${getStatusText(booking.status)}
+                            </span>
+                        </div>
+                        
+                        <div class="booking-details">
+                            <div class="detail-item">
+                                <span><strong>Sala:</strong> ${booking.room_name}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span><strong>Data:</strong> ${startDate.toLocaleDateString('pt-BR')}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span><strong>Horário:</strong> ${startDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} - ${endDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span><strong>Duração:</strong> ${calculateDuration(startDate, endDate)}</span>
+                            </div>
+                        </div>
+                        
+                        ${booking.description ? `<p class="text-muted" style="margin: var(--spacing-sm) 0;"><strong>Descrição:</strong> ${booking.description}</p>` : ''}
+                        
+                        <div class="booking-actions">
+                            ${getBookingActions(booking, isUpcoming, isPast, isToday)}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Obter texto do status
+        function getStatusText(status) {
+            const statusMap = {
+                'confirmed': 'Confirmada',
+                'cancelled': 'Cancelada',
+                'in_progress': 'Em Andamento'
+            };
+            return statusMap[status] || status;
+        }
+
+        // Calcular duração
+        function calculateDuration(start, end) {
+            const diff = end - start;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 0) {
+                return minutes > 0 ? `${hours}h ${minutes}min` : `${hours}h`;
+            }
+            return `${minutes}min`;
+        }
+
+        // Obter ações disponíveis para a reserva
+        function getBookingActions(booking, isUpcoming, isPast, isToday) {
+            let actions = '';
+
+            if (booking.status === 'confirmed') {
+                if (isUpcoming || isToday) {
+                    actions += `<button class="btn btn-sm btn-warning" onclick="editBooking(${booking.booking_id})">Editar</button>`;
+                    actions += `<button class="btn btn-sm btn-danger" onclick="cancelBooking(${booking.booking_id}, '${booking.title}')">Cancelar</button>`;
+                }
+                
+                if (isToday) {
+                    actions += `<button class="btn btn-sm btn-success" onclick="checkInBooking(${booking.booking_id})">Check-in</button>`;
+                }
+            }
+
+            if (isPast && booking.status === 'confirmed') {
+                actions += `<button class="btn btn-sm btn-secondary" onclick="rateBooking(${booking.booking_id})">Avaliar</button>`;
+            }
+
+            actions += `<button class="btn btn-sm btn-primary" onclick="viewBookingDetails(${booking.booking_id})">Detalhes</button>`;
+
+            return actions;
+        }
+
+        // Atualizar estatísticas
+        function updateStats(bookings) {
+            const now = new Date();
+            const total = bookings.length;
+            const confirmed = bookings.filter(b => b.status === 'confirmed').length;
+            const upcoming = bookings.filter(b => new Date(b.start_time) > now && b.status === 'confirmed').length;
+            const past = bookings.filter(b => new Date(b.end_time) < now).length;
+
+            document.getElementById('total-bookings').textContent = total;
+            document.getElementById('confirmed-bookings').textContent = confirmed;
+            document.getElementById('upcoming-bookings').textContent = upcoming;
+            document.getElementById('past-bookings').textContent = past;
+        }
+
+        // Aplicar filtros
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const periodFilter = document.getElementById('periodFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+
+            let filteredBookings = [...allBookings];
+            const now = new Date();
+
+            // Filtro por status
+            if (statusFilter) {
+                filteredBookings = filteredBookings.filter(booking => booking.status === statusFilter);
+            }
+
+            // Filtro por período
+            if (periodFilter) {
+                switch (periodFilter) {
+                    case 'upcoming':
+                        filteredBookings = filteredBookings.filter(booking => new Date(booking.start_time) > now);
+                        break;
+                    case 'today':
+                        filteredBookings = filteredBookings.filter(booking => {
+                            const bookingDate = new Date(booking.start_time);
+                            return bookingDate.toDateString() === now.toDateString();
+                        });
+                        break;
+                    case 'week':
+                        const weekStart = new Date(now);
+                        weekStart.setDate(now.getDate() - now.getDay());
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekStart.getDate() + 6);
+                        filteredBookings = filteredBookings.filter(booking => {
+                            const bookingDate = new Date(booking.start_time);
+                            return bookingDate >= weekStart && bookingDate <= weekEnd;
+                        });
+                        break;
+                    case 'month':
+                        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        filteredBookings = filteredBookings.filter(booking => {
+                            const bookingDate = new Date(booking.start_time);
+                            return bookingDate >= monthStart && bookingDate <= monthEnd;
+                        });
+                        break;
+                    case 'past':
+                        filteredBookings = filteredBookings.filter(booking => new Date(booking.end_time) < now);
+                        break;
+                }
+            }
+
+            // Filtro por data específica
+            if (dateFilter) {
+                const filterDate = new Date(dateFilter);
+                filteredBookings = filteredBookings.filter(booking => {
+                    const bookingDate = new Date(booking.start_time);
+                    return bookingDate.toDateString() === filterDate.toDateString();
+                });
+            }
+
+            displayBookings(filteredBookings);
+            showAlert(`Filtros aplicados. ${filteredBookings.length} reserva(s) encontrada(s).`, 'success');
+        }
+
+        // Limpar filtros
+        function clearFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('periodFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+            
+            displayBookings(allBookings);
+            showAlert('Filtros limpos. Mostrando todas as reservas.', 'success');
+        }
+
+        // Ações das reservas
+        function editBooking(bookingId) {
+            alert(`Funcionalidade "Editar Reserva" em desenvolvimento!\n\nReserva ID: ${bookingId}`);
+        }
+
+        // Cancelar reserva REAL
+        async function cancelBooking(bookingId, title) {
+            if (!confirm(`Tem certeza que deseja cancelar a reserva "${title}"?`)) {
+                return;
+            }
+
+            try {
+                const userId = currentUser.user_id || currentUser.id;
+                console.log(`Cancelando reserva ${bookingId}`);
+
+                const response = await fetch(`/api/user/bookings/${bookingId}/cancel`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Erro ao cancelar reserva');
+                }
+
+                console.log(`Reserva cancelada: ${title}`);
+                showAlert('Reserva cancelada com sucesso!', 'success');
+                
+                // Recarregar reservas
+                loadUserBookings();
+
+            } catch (error) {
+                console.error('Erro ao cancelar reserva:', error);
+                showAlert(`Erro ao cancelar reserva: ${error.message}`);
+            }
+        }
+
+        function checkInBooking(bookingId) {
+            alert(`Check-in realizado para a reserva ${bookingId}!\n\nFuncionalidade em desenvolvimento.`);
+        }
+
+        function rateBooking(bookingId) {
+            const rating = prompt('Avalie esta reserva (1-5 estrelas):');
+            if (rating && rating >= 1 && rating <= 5) {
+                showAlert(`Obrigado pela avaliação: ${rating} estrela(s)!`, 'success');
+            }
+        }
+
+        function viewBookingDetails(bookingId) {
+            const booking = allBookings.find(b => b.booking_id === bookingId);
+            if (booking) {
+                const startDate = new Date(booking.start_time);
+                const endDate = new Date(booking.end_time);
+                
+                alert(`Detalhes da Reserva\n\n` +
+                      `Título: ${booking.title}\n` +
+                      `Sala: ${booking.room_name}\n` +
+                      `Data: ${startDate.toLocaleDateString('pt-BR')}\n` +
+                      `Horário: ${startDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} - ${endDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}\n` +
+                      `Status: ${getStatusText(booking.status)}\n` +
+                      `Descrição: ${booking.description || 'Sem descrição'}`);
+            }
+        }
+
+        // Inicialização
+        window.onload = function() {
+            console.log('Verificando autenticação...');
+            if (checkUserAuth()) {
+                console.log('Usuário autenticado:', currentUser.name);
+                document.getElementById('user-name').textContent = currentUser.name;
+                
+                // Configurar avatar com iniciais
+                const iniciais = currentUser.name
+                    .split(' ')
+                    .map(nome => nome[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+                document.getElementById('user-avatar').textContent = iniciais;
+                
+                loadUserBookings();
+            }
+        };
+    </script>
+</body>
+</html>

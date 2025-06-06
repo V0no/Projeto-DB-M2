@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservas - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="dashboard-page">
+    <!-- Header Admin -->
+    <header class="header header-admin">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Administração - Gerenciar Reservas</h1>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="admin-avatar">A</div>
+                <span id="admin-name">Carregando...</span>
+                <button class="logout-btn" onclick="logout()">
+                    Sair
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação Admin -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/admin/dashboard" class="nav-link">
+                Dashboard
+            </a>
+            <a href="/admin/users" class="nav-link">
+                Usuários
+            </a>
+            <a href="/admin/rooms" class="nav-link">
+                Salas
+            </a>
+            <a href="/admin/bookings" class="nav-link admin-active">
+                Reservas
+            </a>
+            <a href="/admin/room-types" class="nav-link">
+                Tipos
+            </a>
+        </div>
+    </nav>
+
+    <div class="container dashboard-content">
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Criar Nova Reserva -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">
+                Criar Nova Reserva
+            </h2>
+            <form id="createBookingForm" class="booking-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bookingTitle" class="form-label required">Título da Reserva:</label>
+                        <input type="text" id="bookingTitle" class="form-control" placeholder="Título da reserva" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="bookingRoom" class="form-label required">Sala:</label>
+                        <select id="bookingRoom" class="form-select" required>
+                            <option value="">Selecione uma sala</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bookingUser" class="form-label required">Usuário:</label>
+                        <select id="bookingUser" class="form-select" required>
+                            <option value="">Selecione um usuário</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bookingStatus" class="form-label">Status:</label>
+                        <select id="bookingStatus" class="form-select">
+                            <option value="confirmed">Confirmada</option>
+                            <option value="in_progress">Em Andamento</option>
+                            <option value="cancelled">Cancelada</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bookingDate" class="form-label required">Data:</label>
+                        <input type="date" id="bookingDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="bookingStartTime" class="form-label required">Início:</label>
+                        <input type="time" id="bookingStartTime" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="bookingEndTime" class="form-label required">Término:</label>
+                        <input type="time" id="bookingEndTime" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="bookingDescription" class="form-label">Descrição (opcional):</label>
+                    <textarea id="bookingDescription" class="form-control" rows="3" placeholder="Descrição da reserva..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-warning" onclick="checkAvailability()">Verificar Disponibilidade</button>
+                    <button type="submit" class="btn btn-success">Criar Reserva</button>
+                </div>
+            </form>
+
+            <div id="availability-results" class="alert" style="display: none; margin-top: var(--spacing-md);"></div>
+            <div id="create-results" class="alert" style="display: none; margin-top: var(--spacing-md);"></div>
+        </div>
+
+        <!-- Lista de Reservas -->
+        <div class="section slide-in-up">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+                <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">
+                    Lista de Reservas
+                </h2>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadBookings()">
+                    Carregar Reservas
+                </button>
+            </div>
+            <div id="bookings-container">
+                <div id="bookings-results" class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Carregando reservas...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Verificar autenticação admin
+        function checkAdminAuth() {
+            try {
+                const userStr = localStorage.getItem('user');
+                if (!userStr) {
+                    alert('Faça login primeiro!');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                const user = JSON.parse(userStr);
+                if (!user.email) {
+                    alert('Sessão inválida! Faça login novamente.');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                if (user.role !== 'admin') {
+                    alert('Acesso restrito para administradores!');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                currentUser = user;
+                return true;
+            } catch (error) {
+                console.error('Erro na verificação de auth:', error);
+                alert('Erro na autenticação! Faça login novamente.');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Tem certeza que deseja sair?')) {
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+        }
+
+        // API calls
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                if (data) options.body = JSON.stringify(data);
+                
+                const response = await fetch(`/api${endpoint}`, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP ${response.status}`);
+                }
+                
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Carregar dados do formulário
+        async function loadFormData() {
+            if (!checkAdminAuth()) return;
+            
+            try {
+                // Carregar salas
+                const rooms = await apiCall('/rooms');
+                const roomSelect = document.getElementById('bookingRoom');
+                roomSelect.innerHTML = '<option value="">Selecione uma sala</option>';
+                rooms.forEach(room => {
+                    roomSelect.innerHTML += `<option value="${room.room_id}">${room.name} (Cap: ${room.capacity})</option>`;
+                });
+
+                // Carregar usuários
+                const users = await apiCall('/users');
+                const userSelect = document.getElementById('bookingUser');
+                userSelect.innerHTML = '<option value="">Selecione um usuário</option>';
+                users.forEach(user => {
+                    userSelect.innerHTML += `<option value="${user.user_id}">${user.name}</option>`;
+                });
+            } catch (error) {
+                console.error('Erro ao carregar dados do formulário:', error);
+                showAlert('Erro ao carregar dados do formulário', 'danger');
+            }
+        }
+
+        // Verificar disponibilidade
+        async function checkAvailability() {
+            if (!checkAdminAuth()) return;
+            
+            const roomId = document.getElementById('bookingRoom').value;
+            const date = document.getElementById('bookingDate').value;
+            const startTime = document.getElementById('bookingStartTime').value;
+            const endTime = document.getElementById('bookingEndTime').value;
+            const resultsDiv = document.getElementById('availability-results');
+            
+            resultsDiv.style.display = 'block';
+
+            if (!roomId || !date || !startTime || !endTime) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = 'Por favor, preencha sala, data e horários';
+                return;
+            }
+
+            resultsDiv.className = 'alert alert-info';
+            resultsDiv.innerHTML = 'Verificando disponibilidade...';
+
+            try {
+                const startDateTime = `${date}T${startTime}:00`;
+                const endDateTime = `${date}T${endTime}:00`;
+                
+                const result = await apiCall('/bookings/check-availability', 'POST', {
+                    room_id: parseInt(roomId),
+                    start_time: startDateTime,
+                    end_time: endDateTime
+                });
+
+                if (result.available) {
+                    resultsDiv.className = 'alert alert-success';
+                    resultsDiv.innerHTML = 'Sala disponível no horário solicitado!';
+                } else {
+                    resultsDiv.className = 'alert alert-danger';
+                    resultsDiv.innerHTML = `Sala não disponível. Conflitos encontrados: ${result.conflicting_bookings?.length || 0}`;
+                }
+            } catch (error) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = `Erro: ${error.message}`;
+            }
+        }
+
+        // Criar reserva
+        document.getElementById('createBookingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!checkAdminAuth()) return;
+            
+            const resultsDiv = document.getElementById('create-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.className = 'alert alert-info';
+            resultsDiv.innerHTML = 'Criando reserva...';
+            
+            const bookingData = {
+                title: document.getElementById('bookingTitle').value.trim(),
+                room_id: parseInt(document.getElementById('bookingRoom').value),
+                user_id: parseInt(document.getElementById('bookingUser').value),
+                start_time: `${document.getElementById('bookingDate').value}T${document.getElementById('bookingStartTime').value}:00`,
+                end_time: `${document.getElementById('bookingDate').value}T${document.getElementById('bookingEndTime').value}:00`,
+                status: document.getElementById('bookingStatus').value,
+                description: document.getElementById('bookingDescription').value.trim()
+            };
+
+            if (!bookingData.title || !bookingData.room_id || !bookingData.user_id) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = 'Por favor, preencha título, sala e usuário';
+                return;
+            }
+
+            try {
+                const booking = await apiCall('/bookings', 'POST', bookingData);
+                resultsDiv.className = 'alert alert-success';
+                resultsDiv.innerHTML = `Reserva criada: <strong>${booking.title}</strong> (ID: ${booking.booking_id})`;
+                
+                // Limpar formulário
+                this.reset();
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('bookingDate').value = today;
+                
+                showAlert('Reserva criada com sucesso!', 'success');
+                loadBookings();
+            } catch (error) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = `Erro: ${error.message}`;
+                showAlert(`Erro ao criar reserva: ${error.message}`, 'danger');
+            }
+        });
+
+        // Carregar reservas
+        async function loadBookings() {
+            if (!checkAdminAuth()) return;
+            
+            const resultsDiv = document.getElementById('bookings-results');
+            resultsDiv.className = 'loading-state';
+            resultsDiv.innerHTML = '<div class="loading-spinner"></div><p>Carregando reservas...</p>';
+            
+            try {
+                const bookings = await apiCall('/bookings');
+                
+                if (bookings.length === 0) {
+                    resultsDiv.className = 'no-data';
+                    resultsDiv.innerHTML = `
+                        <h3>Nenhuma reserva encontrada</h3>
+                        <p>Crie a primeira reserva no formulário acima.</p>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <div class="alert alert-info" style="margin-bottom: var(--spacing-lg);">
+                        <strong>Total: ${bookings.length} reservas encontradas</strong>
+                    </div>
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Título</th>
+                                    <th>Sala</th>
+                                    <th>Usuário</th>
+                                    <th>Data/Hora</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                bookings.forEach(booking => {
+                    const startDate = new Date(booking.start_time);
+                    const endDate = new Date(booking.end_time);
+                    const statusBadge = getStatusBadge(booking.status);
+                    
+                    html += `
+                        <tr>
+                            <td>${booking.booking_id}</td>
+                            <td><strong>${booking.title}</strong></td>
+                            <td>${booking.room_name}</td>
+                            <td>${booking.user_name}</td>
+                            <td>${startDate.toLocaleString('pt-BR')}</td>
+                            <td>${statusBadge}</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="btn btn-sm btn-warning" onclick="cancelBooking(${booking.booking_id}, '${booking.title}')">Cancelar</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteBooking(${booking.booking_id}, '${booking.title}')">Excluir</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table></div>';
+                resultsDiv.innerHTML = html;
+                resultsDiv.className = '';
+            } catch (error) {
+                resultsDiv.className = 'error-state';
+                resultsDiv.innerHTML = `
+                    <h3>Erro ao carregar reservas</h3>
+                    <p>${error.message}</p>
+                    <button class="btn btn-primary" onclick="loadBookings()">Tentar Novamente</button>
+                `;
+            }
+        }
+
+        // Badge de status
+        function getStatusBadge(status) {
+            const badges = {
+                confirmed: '<span class="badge badge-success">Confirmada</span>',
+                cancelled: '<span class="badge badge-danger">Cancelada</span>',
+                in_progress: '<span class="badge badge-warning">Em Andamento</span>'
+            };
+            return badges[status] || `<span class="badge">${status}</span>`;
+        }
+
+        // Cancelar reserva
+        async function cancelBooking(bookingId, title) {
+            if (!checkAdminAuth()) return;
+            
+            if (!confirm(`Tem certeza que deseja cancelar a reserva "${title}"?`)) {
+                return;
+            }
+
+            try {
+                await apiCall(`/bookings/${bookingId}/cancel`, 'PATCH');
+                showAlert('Reserva cancelada com sucesso!', 'success');
+                loadBookings();
+            } catch (error) {
+                showAlert(`Erro ao cancelar reserva: ${error.message}`, 'danger');
+            }
+        }
+
+        // Excluir reserva
+        async function deleteBooking(bookingId, title) {
+            if (!checkAdminAuth()) return;
+            
+            if (!confirm(`Tem certeza que deseja EXCLUIR PERMANENTEMENTE a reserva "${title}"?\n\nEsta ação não pode ser desfeita.`)) {
+                return;
+            }
+
+            try {
+                await apiCall(`/bookings/${bookingId}`, 'DELETE');
+                showAlert('Reserva excluída com sucesso!', 'success');
+                loadBookings();
+            } catch (error) {
+                showAlert(`Erro ao excluir reserva: ${error.message}`, 'danger');
+            }
+        }
+
+        // Inicialização
+        window.onload = function() {
+            console.log('Verificando autenticação admin...');
+            if (checkAdminAuth()) {
+                console.log('Admin autenticado:', currentUser.name);
+                document.getElementById('admin-name').textContent = currentUser.name;
+                
+                // Configurar avatar
+                const iniciais = currentUser.name
+                    .split(' ')
+                    .map(nome => nome[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+                document.getElementById('admin-avatar').textContent = iniciais;
+                
+                // Definir data de hoje como padrão
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('bookingDate').value = today;
+                
+                loadFormData();
+                loadBookings();
+            }
+        };
+    </script>
+</body>
+</html>

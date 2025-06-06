@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Reserva - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="dashboard-page">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Nova Reserva</h1>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="user-avatar">?</div>
+                <span id="user-name">Carregando...</span>
+                <button class="logout-btn" onclick="logout()">
+                    Sair
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/user/dashboard" class="nav-link">
+                Dashboard
+            </a>
+            <a href="/user/bookings" class="nav-link">
+                Minhas Reservas
+            </a>
+            <a href="/user/new-booking" class="nav-link active">
+                Nova Reserva
+            </a>
+            <a href="/user/profile" class="nav-link">
+                Meu Perfil
+            </a>
+        </div>
+    </nav>
+
+    <div class="container dashboard-content">
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading-state" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Processando...</p>
+        </div>
+
+        <!-- Formulário de Nova Reserva -->
+        <form id="bookingForm" class="booking-form">
+            <!-- Passo 1: Informações Básicas -->
+            <div class="step slide-in-up">
+                <div class="step-header">
+                    <div class="step-number current" id="step1">1</div>
+                    <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">Informações da Reserva</h2>
+                </div>
+                
+                <div class="section">
+                    <div class="form-group">
+                        <label for="title" class="form-label required">Título da Reserva:</label>
+                        <input type="text" id="title" name="title" class="form-control" required 
+                               placeholder="Ex: Reunião de Equipe, Workshop, etc.">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description" class="form-label">Descrição (opcional):</label>
+                        <textarea id="description" name="description" class="form-control" rows="3" 
+                                  placeholder="Descreva o objetivo da reserva..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Passo 2: Data e Horário -->
+            <div class="step slide-in-up">
+                <div class="step-header">
+                    <div class="step-number" id="step2">2</div>
+                    <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">Data e Horário</h2>
+                </div>
+                
+                <div class="section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="date" class="form-label required">Data:</label>
+                            <input type="date" id="date" name="date" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Horários Rápidos:</label>
+                            <div class="quick-times">
+                                <button type="button" class="quick-time-btn" onclick="setQuickTime('09:00', '10:00')">9h-10h</button>
+                                <button type="button" class="quick-time-btn" onclick="setQuickTime('10:00', '12:00')">10h-12h</button>
+                                <button type="button" class="quick-time-btn" onclick="setQuickTime('14:00', '16:00')">14h-16h</button>
+                                <button type="button" class="quick-time-btn" onclick="setQuickTime('16:00', '18:00')">16h-18h</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startTime" class="form-label required">Horário de Início:</label>
+                            <input type="time" id="startTime" name="startTime" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="endTime" class="form-label required">Horário de Término:</label>
+                            <input type="time" id="endTime" name="endTime" class="form-control" required>
+                            <div id="duration" class="duration-display"></div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-warning" onclick="checkAvailability()" id="checkBtn">
+                        Verificar Disponibilidade
+                    </button>
+                </div>
+            </div>
+
+            <!-- Passo 3: Seleção de Sala -->
+            <div class="step slide-in-up">
+                <div class="step-header">
+                    <div class="step-number" id="step3">3</div>
+                    <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">Escolher Sala</h2>
+                </div>
+                
+                <div class="section">
+                    <div id="availability-results" class="availability-check" style="display: none;">
+                        <h4>Resultado da Verificação</h4>
+                        <div id="availability-message" class="alert alert-info"></div>
+                        <div id="rooms-list" class="room-selection"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Passo 4: Confirmação -->
+            <div class="step slide-in-up">
+                <div class="step-header">
+                    <div class="step-number" id="step4">4</div>
+                    <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">Confirmação</h2>
+                </div>
+                
+                <div class="section">
+                    <div id="booking-summary" class="form-summary" style="display: none;">
+                        <div class="summary-title">
+                            Resumo da Reserva
+                        </div>
+                        <div id="summary-content"></div>
+                        
+                        <div style="margin-top: var(--spacing-lg);">
+                            <button type="submit" class="btn btn-success btn-lg" id="submitBtn" disabled>
+                                Confirmar Reserva
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="clearForm()">
+                                Limpar Formulário
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="window.location.href='/user/bookings'">
+                                Ver Minhas Reservas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let availableRooms = [];
+        let selectedRoom = null;
+
+        // Verificar autenticação
+        function checkUserAuth() {
+            try {
+                const userStr = localStorage.getItem('user');
+                if (!userStr) {
+                    alert('Faça login primeiro!');
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                const user = JSON.parse(userStr);
+                if (!user.email) {
+                    alert('Sessão inválida! Faça login novamente.');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                currentUser = user;
+                return user;
+            } catch (error) {
+                console.error('Erro na verificação de auth:', error);
+                alert('Erro na autenticação! Faça login novamente.');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+                return null;
+            }
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Tem certeza que deseja sair?')) {
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        // Mostrar/esconder loading
+        function toggleLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type = 'danger') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+        }
+
+        // Definir horários rápidos
+        function setQuickTime(start, end) {
+            document.getElementById('startTime').value = start;
+            document.getElementById('endTime').value = end;
+            updateDuration();
+        }
+
+        // Atualizar duração
+        function updateDuration() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const durationDiv = document.getElementById('duration');
+
+            if (startTime && endTime) {
+                const start = new Date(`2000-01-01T${startTime}`);
+                const end = new Date(`2000-01-01T${endTime}`);
+                const diff = end - start;
+
+                if (diff > 0) {
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    let durationText = '';
+                    if (hours > 0) {
+                        durationText += `${hours}h`;
+                        if (minutes > 0) durationText += ` ${minutes}min`;
+                    } else {
+                        durationText = `${minutes}min`;
+                    }
+                    
+                    durationDiv.textContent = `Duração: ${durationText}`;
+                    durationDiv.style.color = 'var(--success-color)';
+                    
+                    updateStepStatus(2, 'completed');
+                } else {
+                    durationDiv.textContent = 'Horário de término deve ser posterior ao início';
+                    durationDiv.style.color = 'var(--danger-color)';
+                    updateStepStatus(2, 'current');
+                }
+            } else {
+                durationDiv.textContent = '';
+                updateStepStatus(2, 'current');
+            }
+        }
+
+        // Atualizar status do passo
+        function updateStepStatus(stepNumber, status) {
+            const stepElement = document.getElementById(`step${stepNumber}`);
+            stepElement.className = 'step-number';
+            
+            if (status === 'completed') {
+                stepElement.classList.add('completed');
+            } else if (status === 'current') {
+                stepElement.classList.add('current');
+            }
+        }
+
+        // Verificar disponibilidade REAL
+        async function checkAvailability() {
+            const date = document.getElementById('date').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if (!date || !startTime || !endTime) {
+                showAlert('Por favor, preencha data e horários antes de verificar disponibilidade');
+                return;
+            }
+
+            // Validar se o horário de término é posterior ao início
+            const start = new Date(`2000-01-01T${startTime}`);
+            const end = new Date(`2000-01-01T${endTime}`);
+            
+            if (end <= start) {
+                showAlert('O horário de término deve ser posterior ao início');
+                return;
+            }
+
+            // Validar se a data não é no passado
+            const selectedDate = new Date(date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDate < today) {
+                showAlert('Não é possível fazer reservas para datas passadas');
+                return;
+            }
+
+            toggleLoading(true);
+
+            try {
+                console.log(`Verificando disponibilidade: ${date} ${startTime}-${endTime}`);
+                
+                // API REAL - usando endpoint correto
+                const response = await fetch('/api/user/check-availability', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        start_time: `${date}T${startTime}:00`,
+                        end_time: `${date}T${endTime}:00`
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Erro ao verificar disponibilidade');
+                }
+
+                availableRooms = result.rooms || [];
+                console.log(`Verificação concluída: ${result.summary?.available || 0} salas disponíveis`);
+
+                displayAvailabilityResults(availableRooms, result.summary);
+                updateStepStatus(3, 'current');
+
+            } catch (error) {
+                console.error('Erro ao verificar disponibilidade:', error);
+                showAlert(`Erro ao verificar disponibilidade: ${error.message}`);
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Exibir resultados de disponibilidade
+        function displayAvailabilityResults(rooms, summary) {
+            const resultsDiv = document.getElementById('availability-results');
+            const messageDiv = document.getElementById('availability-message');
+            const roomsList = document.getElementById('rooms-list');
+
+            const availableCount = summary?.available || rooms.filter(r => r.available).length;
+            const totalCount = summary?.total || rooms.length;
+
+            if (availableCount === 0) {
+                messageDiv.innerHTML = `❌ Nenhuma sala disponível no horário solicitado`;
+                messageDiv.className = 'alert alert-danger';
+                roomsList.innerHTML = '<div class="no-data"><p>Tente outro horário ou data.</p></div>';
+            } else {
+                messageDiv.innerHTML = `✅ ${availableCount} de ${totalCount} salas disponíveis`;
+                messageDiv.className = 'alert alert-success';
+                
+                let roomsHTML = '';
+                rooms.forEach(room => {
+                    const availableClass = room.available ? '' : 'unavailable';
+                    const statusClass = room.available ? 'available' : 'occupied';
+                    const availableText = room.available ? '✅ Disponível' : '❌ Ocupada';
+                    
+                    roomsHTML += `
+                        <div class="room-card ${availableClass}" onclick="${room.available ? `selectRoom(${room.room_id})` : ''}" id="room-${room.room_id}">
+                            <div class="room-title">${room.name}</div>
+                            <div class="room-details">
+                                <div class="detail-item">
+                                    <span>👥</span>
+                                    <span>Capacidade: ${room.capacity} pessoas</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span>📍</span>
+                                    <span>Local: ${room.location}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span>🏷️</span>
+                                    <span>Tipo: ${room.room_type_name || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="room-status ${statusClass}">
+                                ${availableText}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                roomsList.innerHTML = roomsHTML;
+            }
+
+            resultsDiv.style.display = 'block';
+            showAlert(`✅ Verificação concluída! ${availableCount} sala(s) disponível(is).`, 'success');
+        }
+
+        // Selecionar sala
+        function selectRoom(roomId) {
+            // Remover seleção anterior
+            document.querySelectorAll('.room-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Selecionar nova sala
+            document.getElementById(`room-${roomId}`).classList.add('selected');
+            
+            selectedRoom = availableRooms.find(room => room.room_id === roomId);
+            
+            if (selectedRoom) {
+                updateStepStatus(3, 'completed');
+                updateStepStatus(4, 'current');
+                showBookingSummary();
+                showAlert(`✅ Sala "${selectedRoom.name}" selecionada!`, 'success');
+            }
+        }
+
+        // Mostrar resumo da reserva
+        function showBookingSummary() {
+            const summaryDiv = document.getElementById('booking-summary');
+            const summaryContent = document.getElementById('summary-content');
+            const submitBtn = document.getElementById('submitBtn');
+
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const date = document.getElementById('date').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if (!selectedRoom || !title || !date || !startTime || !endTime) {
+                return;
+            }
+
+            const formattedDate = new Date(date).toLocaleDateString('pt-BR');
+            const start = new Date(`2000-01-01T${startTime}`);
+            const end = new Date(`2000-01-01T${endTime}`);
+            const duration = calculateDuration(start, end);
+
+            summaryContent.innerHTML = `
+                <div class="summary-item">
+                    <span class="summary-label">📝 Título:</span>
+                    <span class="summary-value">${title}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">🏢 Sala:</span>
+                    <span class="summary-value">${selectedRoom.name}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">📍 Local:</span>
+                    <span class="summary-value">${selectedRoom.location}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">👥 Capacidade:</span>
+                    <span class="summary-value">${selectedRoom.capacity} pessoas</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">📅 Data:</span>
+                    <span class="summary-value">${formattedDate}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">⏰ Horário:</span>
+                    <span class="summary-value">${startTime} - ${endTime}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">⏱️ Duração:</span>
+                    <span class="summary-value">${duration}</span>
+                </div>
+                ${description ? `
+                <div class="summary-item">
+                    <span class="summary-label">📝 Descrição:</span>
+                    <span class="summary-value">${description}</span>
+                </div>
+                ` : ''}
+                
+                <div class="alert alert-warning" style="margin-top: var(--spacing-md);">
+                    <strong>ℹ️ Importante:</strong> Após confirmar, a reserva será salva no sistema. A reserva pode ser cancelada até 2 horas antes do horário agendado.
+                </div>
+            `;
+
+            summaryDiv.style.display = 'block';
+            submitBtn.disabled = false;
+        }
+
+        // Calcular duração
+        function calculateDuration(start, end) {
+            const diff = end - start;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 0) {
+                return minutes > 0 ? `${hours}h ${minutes}min` : `${hours}h`;
+            }
+            return `${minutes}min`;
+        }
+
+        // Limpar formulário
+        function clearForm() {
+            if (confirm('🗑️ Tem certeza que deseja limpar o formulário?')) {
+                document.getElementById('bookingForm').reset();
+                document.getElementById('availability-results').style.display = 'none';
+                document.getElementById('booking-summary').style.display = 'none';
+                document.getElementById('duration').textContent = '';
+                selectedRoom = null;
+                availableRooms = [];
+                
+                // Resetar status dos passos
+                updateStepStatus(1, 'current');
+                updateStepStatus(2, '');
+                updateStepStatus(3, '');
+                updateStepStatus(4, '');
+                
+                document.getElementById('submitBtn').disabled = true;
+                showAlert('✅ Formulário limpo!', 'success');
+                
+                // Redefinir data mínima
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('date').value = today;
+            }
+        }
+
+        // Submissão do formulário REAL
+        document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (!currentUser || !selectedRoom) {
+                showAlert('❌ Erro: usuário ou sala não selecionada');
+                return;
+            }
+
+            const userId = currentUser.user_id || currentUser.id;
+            const bookingData = {
+                title: document.getElementById('title').value.trim(),
+                description: document.getElementById('description').value.trim(),
+                room_id: selectedRoom.room_id,
+                user_id: userId,
+                start_time: `${document.getElementById('date').value}T${document.getElementById('startTime').value}:00`,
+                end_time: `${document.getElementById('date').value}T${document.getElementById('endTime').value}:00`
+            };
+
+            if (!bookingData.title) {
+                showAlert('❌ Título da reserva é obrigatório');
+                return;
+            }
+
+            toggleLoading(true);
+
+            try {
+                console.log(`📝 Criando reserva: ${bookingData.title}`);
+                
+                // API REAL - criar reserva no banco
+                const response = await fetch('/api/user/bookings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(bookingData)
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Erro ao criar reserva');
+                }
+
+                const newBooking = result.booking;
+                console.log(`✅ Reserva criada: ${newBooking.title || bookingData.title} (ID: ${newBooking.booking_id})`);
+
+                showAlert(`
+                    ✅ <strong>Reserva criada com sucesso!</strong><br>
+                    📝 Título: ${bookingData.title}<br>
+                    🏢 Sala: ${selectedRoom.name}<br>
+                    📅 Data: ${new Date(bookingData.start_time).toLocaleDateString('pt-BR')}<br>
+                    ⏰ Horário: ${document.getElementById('startTime').value} - ${document.getElementById('endTime').value}<br>
+                    🆔 ID da Reserva: ${newBooking.booking_id}<br><br>
+                    📧 Reserva salva no sistema!
+                `, 'success');
+
+                // Redirecionar após 3 segundos
+                setTimeout(() => {
+                    window.location.href = '/user/bookings';
+                }, 3000);
+
+            } catch (error) {
+                console.error('❌ Erro ao criar reserva:', error);
+                showAlert(`❌ Erro ao criar reserva: ${error.message}`);
+            } finally {
+                toggleLoading(false);
+            }
+        });
+
+        // Event listeners
+        document.getElementById('startTime').addEventListener('change', updateDuration);
+        document.getElementById('endTime').addEventListener('change', updateDuration);
+
+        document.getElementById('title').addEventListener('input', function() {
+            if (this.value.trim()) {
+                updateStepStatus(1, 'completed');
+                updateStepStatus(2, 'current');
+            } else {
+                updateStepStatus(1, 'current');
+            }
+        });
+
+        // Inicialização
+        window.onload = function() {
+            console.log('🔐 Verificando autenticação...');
+            if (checkUserAuth()) {
+                console.log('✅ Usuário autenticado:', currentUser.name);
+                document.getElementById('user-name').textContent = currentUser.name;
+                
+                // Configurar avatar com iniciais
+                const iniciais = currentUser.name
+                    .split(' ')
+                    .map(nome => nome[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+                document.getElementById('user-avatar').textContent = iniciais;
+                
+                // Definir data mínima como hoje
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('date').min = today;
+                document.getElementById('date').value = today;
+                
+                // Focar no campo título
+                document.getElementById('title').focus();
+            }
+        };
+    </script>
+</body>
+</html>

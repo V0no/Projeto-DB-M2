@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup - Sistema de Reservas</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .setup-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            color: #333;
+            margin: 0;
+            font-size: 2rem;
+        }
+        .logo p {
+            color: #666;
+            margin: 5px 0 0 0;
+            font-size: 14px;
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .credentials-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            display: none;
+        }
+        .credential-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #ccc;
+        }
+        .credential-item:last-child {
+            border-bottom: none;
+        }
+        .credential-item strong {
+            color: #333;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 30px;
+            padding: 12px;
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+        .back-link:hover {
+            background: #545b62;
+        }
+        .status-list {
+            list-style: none;
+            padding: 0;
+        }
+        .status-list li {
+            padding: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-ok {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status-loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .mini-btn {
+            padding: 6px 12px;
+            font-size: 14px;
+            margin: 2px;
+            display: inline-block;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <!-- Logo -->
+        <div class="logo">
+            <h1>⚙️ Setup do Sistema</h1>
+            <p>Configuração e Inicialização</p>
+        </div>
+
+        <!-- Alertas -->
+        <div id="alert" class="alert"></div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <p>⏳ Processando...</p>
+        </div>
+
+        <!-- Status do Sistema -->
+        <div class="section">
+            <h3>🏥 Status do Sistema</h3>
+            <ul class="status-list">
+                <li>
+                    <span>Servidor Web</span>
+                    <span class="status-badge status-ok">Online</span>
+                </li>
+                <li>
+                    <span>API de Usuários</span>
+                    <span id="users-api-status" class="status-badge status-loading">Verificando...</span>
+                </li>
+                <li>
+                    <span>API de Autenticação</span>
+                    <span id="auth-api-status" class="status-badge status-loading">Verificando...</span>
+                </li>
+                <li>
+                    <span>Banco de Dados</span>
+                    <span id="db-status" class="status-badge status-loading">Verificando...</span>
+                </li>
+            </ul>
+            
+            <button class="btn" onclick="checkSystemStatus()">🔄 Verificar Status</button>
+        </div>
+
+        <!-- Criar Usuários Padrão -->
+        <div class="section">
+            <h3>👥 Usuários Padrão do Sistema</h3>
+            <p>Cria/atualiza os usuários padrão com senhas conhecidas:</p>
+            
+            <button class="btn btn-success" onclick="createDefaultUsers()">
+                ➕ Criar/Atualizar Usuários Padrão
+            </button>
+            
+            <div class="credentials-box" id="credentials-info">
+                <h4>🔑 Credenciais Padrão:</h4>
+                <div class="credential-item">
+                    <span><strong>Admin:</strong> admin@sistema.com</span>
+                    <span><strong>Senha:</strong> admin123</span>
+                </div>
+                <div class="credential-item">
+                    <span><strong>Usuário:</strong> user@sistema.com</span>
+                    <span><strong>Senha:</strong> user123</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testar Login -->
+        <div class="section">
+            <h3>🧪 Testar Credenciais</h3>
+            <p>Teste se as credenciais estão funcionando:</p>
+            
+            <div class="form-group">
+                <label for="testEmail">Email:</label>
+                <input type="email" id="testEmail" placeholder="admin@sistema.com" value="admin@sistema.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="testPassword">Senha:</label>
+                <input type="password" id="testPassword" placeholder="admin123" value="admin123">
+            </div>
+            
+            <button class="btn" onclick="testLogin()">🔍 Testar Login</button>
+            
+            <button class="btn mini-btn btn-warning" onclick="quickTestAdmin()">⚡ Admin</button>
+            <button class="btn mini-btn btn-warning" onclick="quickTestUser()">⚡ Usuário</button>
+        </div>
+
+        <!-- Dados de Exemplo -->
+        <div class="section">
+            <h3>🏢 Dados de Exemplo</h3>
+            <p>Criar dados de exemplo para testar o sistema:</p>
+            
+            <button class="btn btn-success" onclick="createSampleData()">
+                ➕ Criar Salas e Tipos de Exemplo
+            </button>
+            
+            <button class="btn btn-warning" onclick="createSampleBookings()">
+                📅 Criar Reservas de Exemplo
+            </button>
+        </div>
+
+        <!-- Configuração Rápida -->
+        <div class="section">
+            <h3>🚀 Configuração Completa</h3>
+            <p>Configure o sistema inteiro automaticamente:</p>
+            
+            <button class="btn btn-success" onclick="fullSetup()">⚡ Setup Completo</button>
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                Cria usuários, salas, tipos e reservas de exemplo.
+            </p>
+        </div>
+
+        <!-- Navegação -->
+        <a href="/login" class="back-link">🚀 Ir para o Login</a>
+    </div>
+
+    <script>
+        // Função para mostrar alertas
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+        }
+
+        // Função para esconder alerta
+        function hideAlert() {
+            document.getElementById('alert').style.display = 'none';
+        }
+
+        // Função para mostrar/esconder loading
+        function toggleLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Atualizar status
+        function updateStatus(elementId, status, text) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.className = `status-badge status-${status}`;
+                element.textContent = text;
+            }
+        }
+
+        // Verificar status do sistema
+        async function checkSystemStatus() {
+            updateStatus('users-api-status', 'loading', 'Verificando...');
+            updateStatus('auth-api-status', 'loading', 'Verificando...');
+            updateStatus('db-status', 'loading', 'Verificando...');
+            
+            try {
+                // Testar API de usuários
+                const usersResponse = await fetch('/api/users');
+                if (usersResponse.ok) {
+                    const users = await usersResponse.json();
+                    updateStatus('users-api-status', 'ok', `OK (${users.length})`);
+                    updateStatus('db-status', 'ok', 'Conectado');
+                } else {
+                    updateStatus('users-api-status', 'error', 'Erro');
+                    updateStatus('db-status', 'error', 'Erro');
+                }
+                
+                // Testar API de auth
+                const authResponse = await fetch('/api/auth/health');
+                if (authResponse.ok) {
+                    updateStatus('auth-api-status', 'ok', 'OK');
+                } else {
+                    updateStatus('auth-api-status', 'error', 'Erro');
+                }
+                
+                showAlert('✅ Verificação de status concluída!', 'success');
+            } catch (error) {
+                updateStatus('users-api-status', 'error', 'Erro');
+                updateStatus('auth-api-status', 'error', 'Erro');
+                updateStatus('db-status', 'error', 'Erro');
+                showAlert(`❌ Erro na verificação: ${error.message}`, 'error');
+            }
+        }
+
+        // Criar usuários padrão
+        async function createDefaultUsers() {
+            hideAlert();
+            toggleLoading(true);
+            
+            try {
+                const response = await fetch('/api/auth/seed', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`
+                        ✅ <strong>Usuários configurados com sucesso!</strong><br>
+                        📊 Criados: ${result.summary.created} | Atualizados: ${result.summary.updated}<br>
+                        👥 Total no sistema: ${result.summary.totalUsers}
+                    `, 'success');
+                    
+                    // Mostrar credenciais
+                    document.getElementById('credentials-info').style.display = 'block';
+                } else {
+                    showAlert(`❌ Erro: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`❌ Erro de conexão: ${error.message}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Testar login
+        async function testLogin() {
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            
+            if (!email || !password) {
+                showAlert('❌ Por favor, preencha email e senha', 'error');
+                return;
+            }
+            
+            hideAlert();
+            toggleLoading(true);
+            
+            try {
+                const response = await fetch('/api/auth/test-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(`
+                        ✅ <strong>Login válido!</strong><br>
+                        👤 Usuário: ${result.user.name}<br>
+                        📧 Email: ${result.user.email}<br>
+                        🔑 Papel: ${result.user.role}
+                    `, 'success');
+                } else {
+                    showAlert(`❌ Falha no login: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`❌ Erro de conexão: ${error.message}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Teste rápido admin
+        function quickTestAdmin() {
+            document.getElementById('testEmail').value = 'admin@sistema.com';
+            document.getElementById('testPassword').value = 'admin123';
+            testLogin();
+        }
+
+        // Teste rápido usuário
+        function quickTestUser() {
+            document.getElementById('testEmail').value = 'user@sistema.com';
+            document.getElementById('testPassword').value = 'user123';
+            testLogin();
+        }
+
+        // Criar dados de exemplo
+        async function createSampleData() {
+            hideAlert();
+            toggleLoading(true);
+            
+            try {
+                showAlert('🚧 Funcionalidade em desenvolvimento! Em breve você poderá criar dados de exemplo automaticamente.', 'info');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Criar reservas de exemplo
+        async function createSampleBookings() {
+            hideAlert();
+            toggleLoading(true);
+            
+            try {
+                showAlert('🚧 Funcionalidade em desenvolvimento! Em breve você poderá criar reservas de exemplo.', 'info');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Setup completo
+        async function fullSetup() {
+            hideAlert();
+            toggleLoading(true);
+            
+            try {
+                // Primeiro criar usuários
+                await createDefaultUsers();
+                
+                // Esperar um pouco
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                showAlert(`
+                    ✅ <strong>Setup inicial concluído!</strong><br>
+                    👥 Usuários padrão criados<br>
+                    🚀 Sistema pronto para uso!<br><br>
+                    <strong>Próximos passos:</strong><br>
+                    1. Faça login como admin<br>
+                    2. Crie salas e tipos de sala<br>
+                    3. Teste as reservas
+                `, 'success');
+                
+                document.getElementById('credentials-info').style.display = 'block';
+            } catch (error) {
+                showAlert(`❌ Erro no setup completo: ${error.message}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // Verificar status ao carregar a página
+        window.onload = function() {
+            console.log('⚙️ Setup carregado');
+            checkSystemStatus();
+        };
+    </script>
+</body>
+</html>

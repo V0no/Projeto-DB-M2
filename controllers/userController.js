@@ -136,6 +136,11 @@ const atualizarUsuario = async (req, res) => {
   const { name, email, phone, role } = req.body;
 
   try {
+    // === VALIDAÇÃO BÁSICA ===
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Nome e email são obrigatórios' });
+    }
+
     // === VALIDAÇÃO DE EMAIL ÚNICO (se alterado) ===
     const emailCheckQuery = 'SELECT user_id FROM Users WHERE email = $1 AND user_id != $2';
     const emailCheck = await pool.query(emailCheckQuery, [email, id]);
@@ -144,6 +149,17 @@ const atualizarUsuario = async (req, res) => {
       return res.status(409).json({ error: 'Email já está em uso por outro usuário' });
     }
 
+    // === BUSCAR USUÁRIO ATUAL PARA PRESERVAR ROLE SE NÃO FORNECIDO ===
+    const currentUserQuery = 'SELECT role FROM Users WHERE user_id = $1';
+    const currentUserResult = await pool.query(currentUserQuery, [id]);
+    
+    if (currentUserResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+
+    // Usar role atual se não fornecido ou se for null/undefined
+    const finalRole = role || currentUserResult.rows[0].role;
+
     // === ATUALIZAÇÃO DO USUÁRIO ===
     const query = `
       UPDATE Users
@@ -151,7 +167,7 @@ const atualizarUsuario = async (req, res) => {
       WHERE user_id = $5
       RETURNING user_id, name, email, phone, role, created_at, updated_at`;
     
-    const values = [name, email, phone, role, id];
+    const values = [name, email, phone, finalRole, id];
     const result = await pool.query(query, values);
 
     if (result.rows.length === 0) {
@@ -327,6 +343,47 @@ const listarReservasUsuario = async (req, res) => {
   }
 };
 
+const atualizarPerfilProprio = async (req, res) => {
+  const { id } = req.params;
+  const { name, email, phone } = req.body;
+
+  try {
+    // === VALIDAÇÃO BÁSICA ===
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Nome e email são obrigatórios' });
+    }
+
+    // === VALIDAÇÃO DE EMAIL ÚNICO (se alterado) ===
+    const emailCheckQuery = 'SELECT user_id FROM Users WHERE email = $1 AND user_id != $2';
+    const emailCheck = await pool.query(emailCheckQuery, [email, id]);
+    
+    if (emailCheck.rows.length > 0) {
+      return res.status(409).json({ error: 'Email já está em uso por outro usuário' });
+    }
+
+    // === ATUALIZAÇÃO APENAS DE DADOS BÁSICOS (SEM ROLE) ===
+    const query = `
+      UPDATE Users
+      SET name = $1, email = $2, phone = $3, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = $4
+      RETURNING user_id, name, email, phone, role, created_at, updated_at`;
+    
+    const values = [name, email, phone, id];
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+
+    console.log('Perfil atualizado pelo usuário:', result.rows[0].email);
+    res.status(200).json(result.rows[0]);
+
+  } catch (error) {
+    console.error('Erro ao atualizar perfil:', error);
+    res.status(500).json(createErrorResponse(error));
+  }
+};
+
 /**
  * FUNÇÃO AUXILIAR PARA PADRONIZAR RESPOSTAS DE ERRO
  * Centraliza a formatação de erros para consistência
@@ -356,5 +413,6 @@ module.exports = {
   alterarSenha,
   desativarUsuario,
   reativarUsuario,
-  listarReservasUsuario
+  listarReservasUsuario,
+  atualizarPerfilProprio
 };

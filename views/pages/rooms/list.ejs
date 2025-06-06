@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salas - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="dashboard-page">
+    <!-- Header Admin -->
+    <header class="header header-admin">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Administração - Gerenciar Salas</h1>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="admin-avatar">A</div>
+                <span id="admin-name">Carregando...</span>
+                <button class="logout-btn" onclick="logout()">
+                    Sair
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação Admin -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/admin/dashboard" class="nav-link">
+                Dashboard
+            </a>
+            <a href="/admin/users" class="nav-link">
+                Usuários
+            </a>
+            <a href="/admin/rooms" class="nav-link admin-active">
+                Salas
+            </a>
+            <a href="/admin/bookings" class="nav-link">
+                Reservas
+            </a>
+            <a href="/admin/room-types" class="nav-link">
+                Tipos
+            </a>
+        </div>
+    </nav>
+
+    <div class="container dashboard-content">
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Criar Nova Sala -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">
+                Criar Nova Sala
+            </h2>
+            <form id="createRoomForm" class="form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="roomName" class="form-label required">Nome da Sala:</label>
+                        <input type="text" id="roomName" class="form-control" placeholder="Nome da sala" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="roomCapacity" class="form-label required">Capacidade:</label>
+                        <input type="number" id="roomCapacity" class="form-control" placeholder="Capacidade" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="roomLocation" class="form-label required">Localização:</label>
+                        <input type="text" id="roomLocation" class="form-control" placeholder="Localização" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="roomType" class="form-label">Tipo:</label>
+                        <select id="roomType" class="form-select">
+                            <option value="">Selecione um tipo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="roomStatus" class="form-label">Status:</label>
+                    <select id="roomStatus" class="form-select">
+                        <option value="available">Disponível</option>
+                        <option value="maintenance">Manutenção</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-success">Criar Sala</button>
+            </form>
+            <div id="create-results" class="alert" style="display: none; margin-top: var(--spacing-md);"></div>
+        </div>
+
+        <!-- Lista de Salas -->
+        <div class="section slide-in-up">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+                <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">
+                    Lista de Salas
+                </h2>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadRooms()">
+                    Carregar Salas
+                </button>
+            </div>
+            <div id="rooms-container">
+                <div id="rooms-results" class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Carregando salas...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verificar Disponibilidade -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">
+                Verificar Disponibilidade de Sala
+            </h2>
+            <form id="checkAvailabilityForm" class="form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="checkRoomId" class="form-label required">Sala:</label>
+                        <select id="checkRoomId" class="form-select" required>
+                            <option value="">Selecione uma sala</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="checkDate" class="form-label required">Data:</label>
+                        <input type="date" id="checkDate" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="checkStartTime" class="form-label required">Início:</label>
+                        <input type="time" id="checkStartTime" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="checkEndTime" class="form-label required">Término:</label>
+                        <input type="time" id="checkEndTime" class="form-control" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-info">Verificar</button>
+            </form>
+            <div id="availability-results" class="alert" style="display: none; margin-top: var(--spacing-md);"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Verificar autenticação admin
+        function checkAdminAuth() {
+            try {
+                const userStr = localStorage.getItem('user');
+                if (!userStr) {
+                    alert('Faça login primeiro!');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                const user = JSON.parse(userStr);
+                if (!user.email) {
+                    alert('Sessão inválida! Faça login novamente.');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                if (user.role !== 'admin') {
+                    alert('Acesso restrito para administradores!');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                currentUser = user;
+                return true;
+            } catch (error) {
+                console.error('Erro na verificação de auth:', error);
+                alert('Erro na autenticação! Faça login novamente.');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Tem certeza que deseja sair?')) {
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+        }
+
+        // API calls
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                if (data) options.body = JSON.stringify(data);
+                
+                const response = await fetch(`/api${endpoint}`, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP ${response.status}`);
+                }
+                
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Carregar tipos de sala para o formulário
+        async function loadRoomTypes() {
+            if (!checkAdminAuth()) return;
+            try {
+                const types = await apiCall('/room-types');
+                const typeSelect = document.getElementById('roomType');
+                typeSelect.innerHTML = '<option value="">Selecione um tipo</option>';
+                types.forEach(type => {
+                    typeSelect.innerHTML += `<option value="${type.room_type_id}">${type.name}</option>`;
+                });
+            } catch (error) {
+                console.error('Erro ao carregar tipos de sala:', error);
+            }
+        }
+
+        // Carregar salas para verificação de disponibilidade
+        async function loadRoomsForCheck() {
+            if (!checkAdminAuth()) return;
+            try {
+                const rooms = await apiCall('/rooms');
+                const roomSelect = document.getElementById('checkRoomId');
+                roomSelect.innerHTML = '<option value="">Selecione uma sala</option>';
+                rooms.forEach(room => {
+                    roomSelect.innerHTML += `<option value="${room.room_id}">${room.name}</option>`;
+                });
+            } catch (error) {
+                console.error('Erro ao carregar salas:', error);
+            }
+        }
+
+        // Criar sala
+        document.getElementById('createRoomForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!checkAdminAuth()) return;
+            
+            const resultsDiv = document.getElementById('create-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.className = 'alert alert-info';
+            resultsDiv.innerHTML = 'Criando sala...';
+            
+            const roomData = {
+                name: document.getElementById('roomName').value.trim(),
+                capacity: parseInt(document.getElementById('roomCapacity').value),
+                location: document.getElementById('roomLocation').value.trim(),
+                room_type_id: document.getElementById('roomType').value ? parseInt(document.getElementById('roomType').value) : null,
+                status: document.getElementById('roomStatus').value
+            };
+
+            if (!roomData.name || !roomData.capacity || !roomData.location) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = 'Por favor, preencha nome, capacidade e localização';
+                return;
+            }
+
+            try {
+                const room = await apiCall('/rooms', 'POST', roomData);
+                resultsDiv.className = 'alert alert-success';
+                resultsDiv.innerHTML = `Sala criada: <strong>${room.name}</strong> (ID: ${room.room_id})`;
+                
+                // Limpar formulário
+                this.reset();
+                
+                showAlert('Sala criada com sucesso!', 'success');
+                loadRooms();
+                loadRoomsForCheck();
+            } catch (error) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = `Erro: ${error.message}`;
+                showAlert(`Erro ao criar sala: ${error.message}`, 'danger');
+            }
+        });
+
+        // Carregar salas
+        async function loadRooms() {
+            if (!checkAdminAuth()) return;
+            
+            const resultsDiv = document.getElementById('rooms-results');
+            resultsDiv.className = 'loading-state';
+            resultsDiv.innerHTML = '<div class="loading-spinner"></div><p>Carregando salas...</p>';
+            
+            try {
+                const rooms = await apiCall('/rooms');
+                
+                if (rooms.length === 0) {
+                    resultsDiv.className = 'no-data';
+                    resultsDiv.innerHTML = `
+                        <h3>Nenhuma sala encontrada</h3>
+                        <p>Crie a primeira sala no formulário acima.</p>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <div class="alert alert-info" style="margin-bottom: var(--spacing-lg);">
+                        <strong>Total: ${rooms.length} salas encontradas</strong>
+                    </div>
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Capacidade</th>
+                                    <th>Localização</th>
+                                    <th>Tipo</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                rooms.forEach(room => {
+                    const statusBadge = getStatusBadge(room.status);
+                    
+                    html += `
+                        <tr>
+                            <td>${room.room_id}</td>
+                            <td><strong>${room.name}</strong></td>
+                            <td>${room.capacity} pessoas</td>
+                            <td>${room.location}</td>
+                            <td>${room.room_type_name || 'N/A'}</td>
+                            <td>${statusBadge}</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="btn btn-sm btn-info" onclick="viewRoomBookings(${room.room_id})">Reservas</button>
+                                    <button class="btn btn-sm btn-warning" onclick="toggleRoomStatus(${room.room_id}, '${room.status}')">Status</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteRoom(${room.room_id}, '${room.name}')">Excluir</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table></div>';
+                resultsDiv.innerHTML = html;
+                resultsDiv.className = '';
+            } catch (error) {
+                resultsDiv.className = 'error-state';
+                resultsDiv.innerHTML = `
+                    <h3>Erro ao carregar salas</h3>
+                    <p>${error.message}</p>
+                    <button class="btn btn-primary" onclick="loadRooms()">Tentar Novamente</button>
+                `;
+            }
+        }
+
+        // Badge de status
+        function getStatusBadge(status) {
+            const badges = {
+                available: '<span class="badge badge-success">Disponível</span>',
+                maintenance: '<span class="badge badge-warning">Manutenção</span>'
+            };
+            return badges[status] || `<span class="badge">${status}</span>`;
+        }
+
+        // Ver reservas da sala
+        async function viewRoomBookings(roomId) {
+            if (!checkAdminAuth()) return;
+            try {
+                const bookings = await apiCall(`/rooms/${roomId}/bookings`);
+                alert(`Sala tem ${bookings.length} reserva(s) futura(s)`);
+            } catch (error) {
+                showAlert(`Erro ao carregar reservas: ${error.message}`, 'danger');
+            }
+        }
+
+        // Alterar status da sala
+        async function toggleRoomStatus(roomId, currentStatus) {
+            if (!checkAdminAuth()) return;
+            
+            const newStatus = currentStatus === 'available' ? 'maintenance' : 'available';
+            
+            if (!confirm(`Alterar status da sala para "${newStatus}"?`)) {
+                return;
+            }
+
+            try {
+                await apiCall(`/rooms/${roomId}/status`, 'PATCH', { status: newStatus });
+                showAlert('Status alterado com sucesso!', 'success');
+                loadRooms();
+            } catch (error) {
+                showAlert(`Erro ao alterar status: ${error.message}`, 'danger');
+            }
+        }
+
+        // Excluir sala
+        async function deleteRoom(roomId, roomName) {
+            if (!checkAdminAuth()) return;
+            
+            if (!confirm(`Tem certeza que deseja excluir a sala "${roomName}"?\n\nAtenção: Só é possível excluir se não houver reservas associadas.`)) {
+                return;
+            }
+
+            try {
+                await apiCall(`/rooms/${roomId}`, 'DELETE');
+                showAlert('Sala excluída com sucesso!', 'success');
+                loadRooms();
+                loadRoomsForCheck();
+            } catch (error) {
+                showAlert(`Erro ao excluir sala: ${error.message}`, 'danger');
+            }
+        }
+
+        // Verificar disponibilidade da sala
+        document.getElementById('checkAvailabilityForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!checkAdminAuth()) return;
+            
+            const roomId = document.getElementById('checkRoomId').value;
+            const date = document.getElementById('checkDate').value;
+            const startTime = document.getElementById('checkStartTime').value;
+            const endTime = document.getElementById('checkEndTime').value;
+            const resultsDiv = document.getElementById('availability-results');
+            
+            resultsDiv.style.display = 'block';
+            resultsDiv.className = 'alert alert-info';
+            resultsDiv.innerHTML = 'Verificando disponibilidade...';
+
+            try {
+                const startDateTime = `${date}T${startTime}:00`;
+                const endDateTime = `${date}T${endTime}:00`;
+                
+                const result = await apiCall(`/rooms/${roomId}/availability?start_time=${startDateTime}&end_time=${endDateTime}`);
+
+                if (result.available) {
+                    resultsDiv.className = 'alert alert-success';
+                    resultsDiv.innerHTML = `Sala "<strong>${result.room.name}</strong>" está disponível no período solicitado!`;
+                } else {
+                    resultsDiv.className = 'alert alert-danger';
+                    let message = `Sala "<strong>${result.room.name}</strong>" não está disponível.`;
+                    if (result.reason) {
+                        message += ` Motivo: ${result.reason}`;
+                    } else if (result.conflicting_bookings && result.conflicting_bookings.length > 0) {
+                        message += ` Conflitos encontrados: ${result.conflicting_bookings.length} reserva(s)`;
+                    }
+                    resultsDiv.innerHTML = message;
+                }
+            } catch (error) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = `Erro: ${error.message}`;
+            }
+        });
+
+        // Inicialização
+        window.onload = function() {
+            console.log('Verificando autenticação admin...');
+            if (checkAdminAuth()) {
+                console.log('Admin autenticado:', currentUser.name);
+                document.getElementById('admin-name').textContent = currentUser.name;
+                
+                // Configurar avatar
+                const iniciais = currentUser.name
+                    .split(' ')
+                    .map(nome => nome[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+                document.getElementById('admin-avatar').textContent = iniciais;
+                
+                // Definir data de hoje como padrão
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('checkDate').value = today;
+                
+                loadRoomTypes();
+                loadRooms();
+                loadRoomsForCheck();
+            }
+        };
+    </script>
+</body>
+</html>

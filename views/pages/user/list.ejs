@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuários - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="dashboard-page">
+    <!-- Header Admin -->
+    <header class="header header-admin">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Administração - Gerenciar Usuários</h1>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="admin-avatar">A</div>
+                <span id="admin-name">Carregando...</span>
+                <button class="logout-btn" onclick="logout()">
+                    Sair
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação Admin -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/admin/dashboard" class="nav-link">
+                Dashboard
+            </a>
+            <a href="/admin/users" class="nav-link admin-active">
+                Usuários
+            </a>
+            <a href="/admin/rooms" class="nav-link">
+                Salas
+            </a>
+            <a href="/admin/bookings" class="nav-link">
+                Reservas
+            </a>
+            <a href="/admin/room-types" class="nav-link">
+                Tipos
+            </a>
+        </div>
+    </nav>
+
+    <div class="container dashboard-content">
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Criar Novo Usuário -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">
+                Criar Novo Usuário
+            </h2>
+            <form id="createUserForm" class="form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="userName" class="form-label required">Nome:</label>
+                        <input type="text" id="userName" class="form-control" placeholder="Nome completo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userEmail" class="form-label required">Email:</label>
+                        <input type="email" id="userEmail" class="form-control" placeholder="Email" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="userPhone" class="form-label">Telefone:</label>
+                        <input type="tel" id="userPhone" class="form-control" placeholder="Telefone">
+                    </div>
+                    <div class="form-group">
+                        <label for="userRole" class="form-label">Perfil:</label>
+                        <select id="userRole" class="form-select">
+                            <option value="user">Usuário</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="userPassword" class="form-label required">Senha:</label>
+                    <input type="password" id="userPassword" class="form-control" placeholder="Senha" required minlength="6">
+                    <small class="form-text text-muted">Mínimo de 6 caracteres</small>
+                </div>
+
+                <button type="submit" class="btn btn-success">Criar Usuário</button>
+            </form>
+            <div id="create-results" class="alert" style="display: none; margin-top: var(--spacing-md);"></div>
+        </div>
+
+        <!-- Lista de Usuários -->
+        <div class="section slide-in-up">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+                <h2 style="background: transparent; color: inherit; padding: 0; margin: 0;">
+                    Lista de Usuários
+                </h2>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadUsers()">
+                    Carregar Usuários
+                </button>
+            </div>
+            <div id="users-container">
+                <div id="users-results" class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Carregando usuários...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buscar Usuário Específico -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">
+                Buscar Usuário por ID
+            </h2>
+            <form id="searchUserForm" class="form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="searchUserId" class="form-label required">ID do Usuário:</label>
+                        <input type="number" id="searchUserId" class="form-control" placeholder="ID do usuário" required>
+                    </div>
+                    <div class="form-group" style="align-self: end;">
+                        <button type="submit" class="btn btn-info">Buscar</button>
+                    </div>
+                </div>
+            </form>
+            <div id="search-results" class="alert" style="display: none; margin-top: var(--spacing-md);"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Verificar autenticação admin
+        function checkAdminAuth() {
+            try {
+                const userStr = localStorage.getItem('user');
+                if (!userStr) {
+                    alert('Faça login primeiro!');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                const user = JSON.parse(userStr);
+                if (!user.email) {
+                    alert('Sessão inválida! Faça login novamente.');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                if (user.role !== 'admin') {
+                    alert('Acesso restrito para administradores!');
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                currentUser = user;
+                return true;
+            } catch (error) {
+                console.error('Erro na verificação de auth:', error);
+                alert('Erro na autenticação! Faça login novamente.');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Tem certeza que deseja sair?')) {
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+        }
+
+        // API calls
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                if (data) options.body = JSON.stringify(data);
+                
+                const response = await fetch(`/api${endpoint}`, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP ${response.status}`);
+                }
+                
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Formatação do telefone
+        document.getElementById('userPhone').addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, '');
+            
+            if (value.length <= 11) {
+                if (value.length <= 10) {
+                    value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                } else {
+                    value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                }
+                this.value = value;
+            }
+        });
+
+        // Criar usuário
+        document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!checkAdminAuth()) return;
+            
+            const resultsDiv = document.getElementById('create-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.className = 'alert alert-info';
+            resultsDiv.innerHTML = 'Criando usuário...';
+            
+            const userData = {
+                name: document.getElementById('userName').value.trim(),
+                email: document.getElementById('userEmail').value.trim(),
+                phone: document.getElementById('userPhone').value.trim(),
+                role: document.getElementById('userRole').value,
+                password: document.getElementById('userPassword').value
+            };
+
+            if (!userData.name || !userData.email || !userData.password) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = 'Por favor, preencha nome, email e senha';
+                return;
+            }
+
+            if (userData.password.length < 6) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = 'A senha deve ter pelo menos 6 caracteres';
+                return;
+            }
+
+            try {
+                const user = await apiCall('/users', 'POST', userData);
+                resultsDiv.className = 'alert alert-success';
+                resultsDiv.innerHTML = `Usuário criado: <strong>${user.name}</strong> (ID: ${user.user_id})`;
+                
+                // Limpar formulário
+                this.reset();
+                
+                showAlert('Usuário criado com sucesso!', 'success');
+                loadUsers();
+            } catch (error) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = `Erro: ${error.message}`;
+                showAlert(`Erro ao criar usuário: ${error.message}`, 'danger');
+            }
+        });
+
+        // Carregar usuários
+        async function loadUsers() {
+            if (!checkAdminAuth()) return;
+            
+            const resultsDiv = document.getElementById('users-results');
+            resultsDiv.className = 'loading-state';
+            resultsDiv.innerHTML = '<div class="loading-spinner"></div><p>Carregando usuários...</p>';
+            
+            try {
+                const users = await apiCall('/users');
+                
+                if (users.length === 0) {
+                    resultsDiv.className = 'no-data';
+                    resultsDiv.innerHTML = `
+                        <h3>Nenhum usuário encontrado</h3>
+                        <p>Crie o primeiro usuário no formulário acima.</p>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <div class="alert alert-info" style="margin-bottom: var(--spacing-lg);">
+                        <strong>Total: ${users.length} usuários encontrados</strong>
+                    </div>
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Email</th>
+                                    <th>Telefone</th>
+                                    <th>Perfil</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                users.forEach(user => {
+                    const roleBadge = user.role === 'admin' 
+                        ? '<span class="badge badge-warning">Admin</span>'
+                        : '<span class="badge badge-primary">Usuário</span>';
+                    
+                    html += `
+                        <tr>
+                            <td>${user.user_id}</td>
+                            <td><strong>${user.name}</strong></td>
+                            <td>${user.email}</td>
+                            <td>${user.phone || 'N/A'}</td>
+                            <td>${roleBadge}</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="btn btn-sm btn-info" onclick="viewUserBookings(${user.user_id})">Reservas</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.user_id}, '${user.name}')">Desativar</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table></div>';
+                resultsDiv.innerHTML = html;
+                resultsDiv.className = '';
+            } catch (error) {
+                resultsDiv.className = 'error-state';
+                resultsDiv.innerHTML = `
+                    <h3>Erro ao carregar usuários</h3>
+                    <p>${error.message}</p>
+                    <button class="btn btn-primary" onclick="loadUsers()">Tentar Novamente</button>
+                `;
+            }
+        }
+
+        // Buscar usuário específico
+        document.getElementById('searchUserForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!checkAdminAuth()) return;
+            
+            const userId = document.getElementById('searchUserId').value;
+            const resultsDiv = document.getElementById('search-results');
+            
+            resultsDiv.style.display = 'block';
+            resultsDiv.className = 'alert alert-info';
+            resultsDiv.innerHTML = 'Buscando usuário...';
+            
+            try {
+                const user = await apiCall(`/users/${userId}`);
+                resultsDiv.className = 'alert alert-success';
+                resultsDiv.innerHTML = `
+                    <h4>Usuário Encontrado:</h4>
+                    <div class="user-details" style="background: var(--white); padding: var(--spacing-md); border-radius: var(--border-radius-md); margin-top: var(--spacing-sm);">
+                        <p><strong>ID:</strong> ${user.user_id}</p>
+                        <p><strong>Nome:</strong> ${user.name}</p>
+                        <p><strong>Email:</strong> ${user.email}</p>
+                        <p><strong>Telefone:</strong> ${user.phone || 'N/A'}</p>
+                        <p><strong>Perfil:</strong> ${user.role}</p>
+                        <p><strong>Criado em:</strong> ${new Date(user.created_at).toLocaleString('pt-BR')}</p>
+                    </div>
+                `;
+            } catch (error) {
+                resultsDiv.className = 'alert alert-danger';
+                resultsDiv.innerHTML = `Erro: ${error.message}`;
+            }
+        });
+
+        // Ver reservas do usuário
+        async function viewUserBookings(userId) {
+            if (!checkAdminAuth()) return;
+            
+            try {
+                const bookings = await apiCall(`/users/${userId}/bookings`);
+                alert(`Usuário tem ${bookings.length} reserva(s)`);
+            } catch (error) {
+                showAlert(`Erro ao carregar reservas: ${error.message}`, 'danger');
+            }
+        }
+
+        // Desativar usuário
+        async function deleteUser(userId, userName) {
+            if (!checkAdminAuth()) return;
+            
+            if (!confirm(`Tem certeza que deseja DESATIVAR o usuário "${userName}"?\n\nO usuário não poderá mais fazer login.`)) {
+                return;
+            }
+
+            try {
+                await apiCall(`/users/${userId}/deactivate`, 'PATCH');
+                showAlert('Usuário desativado com sucesso!', 'success');
+                loadUsers();
+            } catch (error) {
+                showAlert(`Erro ao desativar usuário: ${error.message}`, 'danger');
+            }
+        }
+
+        // Inicialização
+        window.onload = function() {
+            console.log('Verificando autenticação admin...');
+            if (checkAdminAuth()) {
+                console.log('Admin autenticado:', currentUser.name);
+                document.getElementById('admin-name').textContent = currentUser.name;
+                
+                // Configurar avatar
+                const iniciais = currentUser.name
+                    .split(' ')
+                    .map(nome => nome[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+                document.getElementById('admin-avatar').textContent = iniciais;
+                
+                loadUsers();
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil - Sistema de Reservas</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="dashboard-page">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Meu Perfil</h1>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="user-avatar">?</div>
+                <span id="user-name">Carregando...</span>
+                <button class="logout-btn" onclick="logout()">
+                    Sair
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegação -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="/user/dashboard" class="nav-link">
+                Dashboard
+            </a>
+            <a href="/user/bookings" class="nav-link">
+                Minhas Reservas
+            </a>
+            <a href="/user/new-booking" class="nav-link">
+                Nova Reserva
+            </a>
+            <a href="/user/profile" class="nav-link active">
+                Meu Perfil
+            </a>
+        </div>
+    </nav>
+
+    <div class="container dashboard-content">
+        <!-- Alertas -->
+        <div id="alert" class="alert" style="display: none;"></div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading-state" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Carregando...</p>
+        </div>
+
+        <!-- Informações do Perfil -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">Informações Pessoais</h2>
+            
+            <div style="text-align: center; margin-bottom: var(--spacing-xl);">
+                <div class="user-avatar" id="profile-avatar" style="width: 80px; height: 80px; font-size: 2rem; margin: 0 auto var(--spacing-md) auto;">
+                    ?
+                </div>
+                <h3 id="profile-name" style="margin: 0; color: var(--gray-800);">Carregando...</h3>
+                <p id="profile-email" style="margin: var(--spacing-xs) 0 0 0; color: var(--gray-600);">-</p>
+            </div>
+
+            <div class="stats-grid" style="margin-bottom: var(--spacing-xl);">
+                <div class="stat-card stat-card-primary">
+                    <div id="total-bookings" class="stat-number">-</div>
+                    <div class="stat-label">Total de Reservas</div>
+                </div>
+                <div class="stat-card stat-card-success">
+                    <div id="active-bookings" class="stat-number">-</div>
+                    <div class="stat-label">Reservas Ativas</div>
+                </div>
+                <div class="stat-card stat-card-info">
+                    <div id="member-since" class="stat-number">-</div>
+                    <div class="stat-label">Membro desde</div>
+                </div>
+            </div>
+
+            <form id="profileForm">
+                <div class="form-group">
+                    <label for="name" class="form-label required">Nome Completo:</label>
+                    <input type="text" id="name" name="name" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email" class="form-label">Email:</label>
+                    <input type="email" id="email" name="email" class="form-control" readonly 
+                           style="background: var(--gray-100); color: var(--gray-600);">
+                    <small style="color: var(--gray-500);">O email não pode ser alterado</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone" class="form-label">Telefone:</label>
+                    <input type="tel" id="phone" name="phone" class="form-control" 
+                           placeholder="(11) 99999-9999">
+                </div>
+
+                <button type="submit" class="btn btn-success">Salvar Alterações</button>
+            </form>
+        </div>
+
+        <!-- Alterar Senha -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">Alterar Senha</h2>
+            
+            <form id="passwordForm">
+                <div class="form-group">
+                    <label for="currentPassword" class="form-label required">Senha Atual:</label>
+                    <input type="password" id="currentPassword" name="currentPassword" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="newPassword" class="form-label required">Nova Senha:</label>
+                    <input type="password" id="newPassword" name="newPassword" class="form-control" required minlength="6">
+                    <small style="color: var(--gray-500);">Mínimo de 6 caracteres</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmNewPassword" class="form-label required">Confirmar Nova Senha:</label>
+                    <input type="password" id="confirmNewPassword" name="confirmNewPassword" class="form-control" required>
+                </div>
+
+                <button type="submit" class="btn btn-danger">Alterar Senha</button>
+            </form>
+        </div>
+
+        <!-- Histórico de Atividades -->
+        <div class="section slide-in-up">
+            <h2 style="background: transparent; color: inherit; padding: 0; margin-bottom: var(--spacing-lg);">Resumo de Atividades</h2>
+            <div id="activity-summary">
+                <div class="loading-state">
+                    <p>Carregando histórico...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Verificar autenticação
+        function checkUserAuth() {
+            try {
+                const userStr = localStorage.getItem('user');
+                if (!userStr) {
+                    alert('Faça login primeiro!');
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                const user = JSON.parse(userStr);
+                if (!user.email) {
+                    alert('Sessão inválida! Faça login novamente.');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                    return null;
+                }
+                
+                currentUser = user;
+                return user;
+            } catch (error) {
+                console.error('Erro na verificação de auth:', error);
+                alert('Erro na autenticação! Faça login novamente.');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+                return null;
+            }
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Tem certeza que deseja sair?')) {
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+            }
+        }
+
+        // Mostrar/esconder loading
+        function toggleLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Mostrar alerta
+        function showAlert(message, type = 'danger') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = message;
+            alert.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+        }
+
+        // Função auxiliar para fazer chamadas da API
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                if (data) options.body = JSON.stringify(data);
+                
+                const response = await fetch(`/api${endpoint}`, options);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                throw new Error(`Erro na API: ${error.message}`);
+            }
+        }
+
+        // Carregar dados do perfil
+        async function loadProfileData() {
+            if (!currentUser) return;
+
+            try {
+                console.log(`Carregando perfil do usuário ${currentUser.user_id || currentUser.id}`);
+                
+                // Buscar dados REAIS do usuário
+                const userId = currentUser.user_id || currentUser.id;
+                const userData = await apiCall(`/users/${userId}`);
+                console.log('Dados do usuário carregados:', userData);
+
+                // Atualizar informações básicas
+                document.getElementById('user-name').textContent = userData.name;
+                document.getElementById('profile-name').textContent = userData.name;
+                document.getElementById('profile-email').textContent = userData.email;
+                document.getElementById('name').value = userData.name;
+                document.getElementById('email').value = userData.email;
+                document.getElementById('phone').value = userData.phone || '';
+                
+                // Avatar com iniciais
+                const initials = userData.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                document.getElementById('user-avatar').textContent = initials;
+                document.getElementById('profile-avatar').textContent = initials;
+
+                // Atualizar dados locais se necessário
+                currentUser.name = userData.name;
+                currentUser.email = userData.email;
+                localStorage.setItem('user', JSON.stringify(currentUser));
+
+                // Carregar estatísticas reais do banco
+                await loadUserStats();
+                
+                // Carregar histórico de atividades
+                await loadActivitySummary();
+                
+            } catch (error) {
+                console.error('Erro ao carregar perfil:', error);
+                showAlert(`Erro ao carregar dados do perfil: ${error.message}`, 'danger');
+                
+                // Usar dados locais como fallback
+                document.getElementById('user-name').textContent = currentUser.name;
+                document.getElementById('profile-name').textContent = currentUser.name;
+                document.getElementById('profile-email').textContent = currentUser.email;
+                document.getElementById('name').value = currentUser.name;
+                document.getElementById('email').value = currentUser.email;
+                
+                const initials = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                document.getElementById('user-avatar').textContent = initials;
+                document.getElementById('profile-avatar').textContent = initials;
+            }
+        }
+
+        // Carregar estatísticas REAIS do usuário
+        async function loadUserStats() {
+            try {
+                console.log(`Carregando estatísticas do usuário ${currentUser.user_id || currentUser.id}`);
+                
+                // Buscar TODAS as reservas - usar endpoint que existe
+                const allBookings = await apiCall('/bookings');
+                const userId = currentUser.user_id || currentUser.id;
+                const userBookings = allBookings.filter(booking => booking.user_id == userId);
+                console.log(`${userBookings.length} reservas encontradas`);
+                
+                const now = new Date();
+                
+                // Calcular estatísticas
+                const totalBookings = userBookings.length;
+                const upcomingBookings = userBookings.filter(booking => 
+                    new Date(booking.start_time) > now && 
+                    booking.status === 'confirmed'
+                ).length;
+                
+                // Buscar dados do usuário para data de criação
+                const userData = await apiCall(`/users/${userId}`);
+                
+                // Atualizar interface
+                document.getElementById('total-bookings').textContent = totalBookings.toString();
+                document.getElementById('active-bookings').textContent = upcomingBookings.toString();
+                
+                // Formatar data de membro desde
+                if (userData.created_at) {
+                    const memberDate = new Date(userData.created_at);
+                    const memberSince = memberDate.toLocaleDateString('pt-BR', { 
+                        month: 'short', 
+                        year: 'numeric' 
+                    });
+                    document.getElementById('member-since').textContent = memberSince;
+                } else {
+                    document.getElementById('member-since').textContent = 'N/A';
+                }
+                
+                console.log(`Estatísticas calculadas: ${totalBookings} total, ${upcomingBookings} futuras`);
+                
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+                // Manter valores padrão em caso de erro
+                document.getElementById('total-bookings').textContent = '-';
+                document.getElementById('active-bookings').textContent = '-';
+                document.getElementById('member-since').textContent = '-';
+            }
+        }
+
+        // Carregar resumo de atividades REAIS
+        async function loadActivitySummary() {
+            const summaryDiv = document.getElementById('activity-summary');
+            
+            try {
+                console.log(`Carregando atividades do usuário ${currentUser.user_id || currentUser.id}`);
+                
+                // Buscar reservas REAIS do banco
+                const allBookings = await apiCall('/bookings');
+                const userId = currentUser.user_id || currentUser.id;
+                const bookings = allBookings.filter(booking => booking.user_id == userId);
+                const now = new Date();
+                
+                if (bookings.length === 0) {
+                    summaryDiv.innerHTML = `
+                        <div class="no-data">
+                            <h4>Nenhuma atividade ainda</h4>
+                            <p>Você ainda não fez nenhuma reserva no sistema.</p>
+                            <button class="btn btn-success" onclick="window.location.href='/user/new-booking'">
+                                Fazer Primeira Reserva
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Última reserva concluída
+                const pastBookings = bookings
+                    .filter(b => new Date(b.end_time) < now)
+                    .sort((a, b) => new Date(b.end_time) - new Date(a.end_time));
+                
+                // Próxima reserva
+                const upcomingBookings = bookings
+                    .filter(b => new Date(b.start_time) > now && b.status === 'confirmed')
+                    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+                
+                // Sala mais usada
+                const roomUsage = {};
+                bookings.forEach(booking => {
+                    if (booking.room_name) {
+                        roomUsage[booking.room_name] = (roomUsage[booking.room_name] || 0) + 1;
+                    }
+                });
+                
+                const favoriteRoom = Object.keys(roomUsage).length > 0 
+                    ? Object.keys(roomUsage).reduce((a, b) => roomUsage[a] > roomUsage[b] ? a : b)
+                    : null;
+                
+                // Status das reservas
+                const statusCount = {
+                    confirmed: bookings.filter(b => b.status === 'confirmed').length,
+                    cancelled: bookings.filter(b => b.status === 'cancelled').length,
+                    in_progress: bookings.filter(b => b.status === 'in_progress').length
+                };
+                
+                summaryDiv.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+                        <div class="stat-card">
+                            <h4 style="margin: 0; color: var(--primary-color);">Última Reserva</h4>
+                            <p style="margin: var(--spacing-xs) 0;">
+                                ${pastBookings.length > 0 
+                                    ? `${pastBookings[0].room_name}<br><small>${new Date(pastBookings[0].start_time).toLocaleDateString('pt-BR')} às ${new Date(pastBookings[0].start_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</small>`
+                                    : 'Nenhuma reserva passada'
+                                }
+                            </p>
+                        </div>
+                        <div class="stat-card">
+                            <h4 style="margin: 0; color: var(--warning-color);">Próxima Reserva</h4>
+                            <p style="margin: var(--spacing-xs) 0;">
+                                ${upcomingBookings.length > 0 
+                                    ? `${upcomingBookings[0].room_name}<br><small>${new Date(upcomingBookings[0].start_time).toLocaleDateString('pt-BR')} às ${new Date(upcomingBookings[0].start_time).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</small>`
+                                    : 'Nenhuma reserva futura'
+                                }
+                            </p>
+                        </div>
+                        <div class="stat-card">
+                            <h4 style="margin: 0; color: var(--success-color);">Sala Favorita</h4>
+                            <p style="margin: var(--spacing-xs) 0;">
+                                ${favoriteRoom 
+                                    ? `${favoriteRoom}<br><small>${roomUsage[favoriteRoom]} reserva(s)</small>`
+                                    : 'Ainda sem preferência'
+                                }
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style="background: var(--gray-50); padding: var(--spacing-md); border-radius: var(--border-radius-md);">
+                        <h4 style="margin: 0 0 var(--spacing-sm) 0; color: var(--gray-800);">Status das Reservas</h4>
+                        <div style="display: flex; gap: var(--spacing-lg); flex-wrap: wrap;">
+                            <span style="color: var(--success-color);">Confirmadas: ${statusCount.confirmed}</span>
+                            <span style="color: var(--danger-color);">Canceladas: ${statusCount.cancelled}</span>
+                            <span style="color: var(--warning-color);">Em Andamento: ${statusCount.in_progress}</span>
+                        </div>
+                    </div>
+                `;
+                
+                console.log(`Resumo de atividades carregado: ${bookings.length} reservas analisadas`);
+                
+            } catch (error) {
+                console.error('Erro ao carregar atividades:', error);
+                summaryDiv.innerHTML = `
+                    <div class="error-state">
+                        Erro ao carregar histórico de atividades: ${error.message}
+                        <br><button class="btn btn-primary" onclick="loadActivitySummary()" style="margin-top: var(--spacing-sm);">Tentar Novamente</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Formatação do telefone
+        document.getElementById('phone').addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, '');
+            
+            if (value.length <= 11) {
+                if (value.length <= 10) {
+                    value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                } else {
+                    value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                }
+                this.value = value;
+            }
+        });
+
+        // Submissão do formulário de perfil
+        document.getElementById('profileForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!currentUser) return;
+
+            const formData = {
+                name: document.getElementById('name').value.trim(),
+                phone: document.getElementById('phone').value.trim()
+            };
+
+            if (!formData.name) {
+                showAlert('Nome é obrigatório');
+                return;
+            }
+
+            toggleLoading(true);
+
+            try {
+                console.log(`Atualizando perfil do usuário ${currentUser.user_id || currentUser.id}`);
+                
+                // Fazer atualização REAL na API
+                const userId = currentUser.user_id || currentUser.id;
+                const updatedUser = await apiCall(`/users/${userId}`, 'PUT', {
+                    name: formData.name,
+                    email: currentUser.email, // Manter email atual
+                    phone: formData.phone,
+                    role: currentUser.role // Manter role atual
+                });
+                
+                console.log('Perfil atualizado no banco:', updatedUser);
+                
+                // Atualizar dados locais
+                currentUser.name = updatedUser.name;
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                
+                showAlert('Perfil atualizado com sucesso!', 'success');
+                
+                // Atualizar interface
+                document.getElementById('user-name').textContent = currentUser.name;
+                document.getElementById('profile-name').textContent = currentUser.name;
+                const initials = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                document.getElementById('user-avatar').textContent = initials;
+                document.getElementById('profile-avatar').textContent = initials;
+                
+            } catch (error) {
+                console.error('Erro ao atualizar perfil:', error);
+                showAlert('Erro ao atualizar perfil: ' + error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        });
+
+        // Submissão do formulário de senha
+        document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+            if (!currentPassword || !newPassword || !confirmNewPassword) {
+                showAlert('Todos os campos são obrigatórios');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showAlert('A nova senha deve ter pelo menos 6 caracteres');
+                return;
+            }
+
+            if (newPassword !== confirmNewPassword) {
+                showAlert('As senhas não coincidem');
+                return;
+            }
+
+            toggleLoading(true);
+
+            try {
+                console.log(`Alterando senha do usuário ${currentUser.user_id || currentUser.id}`);
+                
+                // Fazer alteração REAL na API
+                const userId = currentUser.user_id || currentUser.id;
+                await apiCall(`/users/${userId}/password`, 'PUT', {
+                    currentPassword: currentPassword,
+                    newPassword: newPassword
+                });
+                
+                console.log('Senha alterada com sucesso');
+                
+                showAlert('Senha alterada com sucesso!', 'success');
+                
+                // Limpar formulário
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmNewPassword').value = '';
+                
+            } catch (error) {
+                console.error('Erro ao alterar senha:', error);
+                showAlert('Erro ao alterar senha: ' + error.message);
+            } finally {
+                toggleLoading(false);
+            }
+        });
+
+        // Inicialização
+        window.onload = function() {
+            console.log('Verificando autenticação...');
+            if (checkUserAuth()) {
+                console.log('Usuário autenticado:', currentUser.name);
+                toggleLoading(true);
+                loadProfileData().then(() => {
+                    toggleLoading(false);
+                    console.log('Perfil carregado completamente');
+                }).catch(error => {
+                    toggleLoading(false);
+                    console.error('Erro ao carregar perfil:', error);
+                });
+            }
+        };
+    </script>
+</body>
+</html>
