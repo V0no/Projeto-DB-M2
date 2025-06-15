@@ -595,7 +595,6 @@ Implementou-se um sistema robusto de variáveis CSS para garantir consistência:
 
 </div>
 
-<div align="center">
 
 
 ---
