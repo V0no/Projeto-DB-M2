@@ -604,19 +604,20 @@ Implementou-se um sistema robusto de variáveis CSS para garantir consistência:
 
 ### 4.1 Demonstração do Sistema Web (Semana 8)
 
-*VIDEO: Insira o link do vídeo demonstrativo nesta seção*
-*Descreva e ilustre aqui o desenvolvimento do sistema web completo, explicando brevemente o que foi entregue em termos de código e sistema. Utilize prints de tela para ilustrar.*
+Link de ilustração do vídeo (Google Drive): [video](https://drive.google.com/file/d/1g-0dQmX_GU72CtsExEFTLLLgy4-MO69f/view?usp=sharing)
 
 ### 4.2 Conclusões e Trabalhos Futuros (Semana 8)
 
 *Indique pontos fortes e pontos a melhorar de maneira geral.*
-*Relacione também quaisquer outras ideias que você tenha para melhorias futuras.*
+
+**Pontos de melhoria**
+- O site poderia estar com um CSS melhor, porém por conta de não ter o conhecimento muito amplo de CSS o site ficou mais básico neste ponto e também melhorar a organização dos códigos do back/front-end.
+
+**Pontos fortes**
+- O site é muito completo, bem mais do que eu imaginei que fosse capaz de fazer, a parte do administrador ficou muito completa tendo as funções CRUD em todas as tabelas e também ficou muito bem explícito no que está acontecendo no sistema, em questão de novas reservas, novos usuários, saúde do sistema e afins.
+- A parte do usuário ficou muito completa também e há uma grande segurança em questão do ADMIN e do USER, porque o USER não irá conseguir ter as mesmas funcionalidades que o ADMIN irá ter, garantindo uma segurança e organização maior para a sistema.
 
 
 
 ## <a name="c5"></a>5. Referências
 
-_Incluir as principais referências de seu projeto, para que o leitor possa consultar caso ele se interessar em aprofundar._<br>
-
----
----

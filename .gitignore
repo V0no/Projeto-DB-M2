@@ -1,3 +1,7 @@
 node_modules/
 .env
 coverage/
+# Adiciona ao .gitignore para ignorar arquivos de vídeo
+echo "*.mp4" >> .gitignore
+echo "*.mov" >> .gitignore
+echo "assets/video-*" >> .gitignore
